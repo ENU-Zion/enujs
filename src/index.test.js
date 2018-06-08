@@ -120,7 +120,7 @@ if(process.env['NODE_ENV'] === 'development') {
     // avoids a same contract version deploy error.
     // TODO: undeploy contract instead (when API allows this)
 
-    deploy('enumivo.msig')
+    deploy('enu.msig')
     deploy('enu.token')
     deploy('enu.bios')
     deploy('enu.system')
