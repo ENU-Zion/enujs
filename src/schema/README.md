@@ -2,11 +2,11 @@
 
 Some files are generated.
 
-See `eosjs/bin/eosio-abi-update.sh`
+See `enujs/bin/enumivo-abi-update.sh`
 
 Updated as follows:
 
 ```bash
-cd ~/eosjs/docker && ./up.sh
-cd ~/eosjs/bin && ./eosio-abi-update.sh
+cd ~/enujs/docker && ./up.sh
+cd ~/enujs/bin && ./enumivo-abi-update.sh
 ```

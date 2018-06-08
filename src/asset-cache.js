@@ -5,8 +5,8 @@ module.exports = AssetCache
 
 function AssetCache(network) {
   const cache = {
-    'SYS@eosio.token': {precision: 4},
-    'EOS@eosio.token': {precision: 4}
+    'SYS@enu.token': {precision: 4},
+    'ENU@enu.token': {precision: 4}
   }
 
   /**
@@ -17,8 +17,8 @@ function AssetCache(network) {
     assert(symbol, 'required symbol')
     assert(contract, 'required contract')
 
-    if(contract === 'eosio') {
-      contract = 'eosio.token'
+    if(contract === 'enumivo') {
+      contract = 'enu.token'
     }
 
     const extendedAsset = `${symbol}@${contract}`
@@ -66,8 +66,8 @@ function AssetCache(network) {
     assert(symbol, 'required symbol')
     assert(contract, 'required contract')
 
-    if(contract === 'eosio') {
-      contract = 'eosio.token'
+    if(contract === 'enumivo') {
+      contract = 'enu.token'
     }
 
     const extendedAsset = `${symbol}@${contract}`

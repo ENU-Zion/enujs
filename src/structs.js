@@ -1,4 +1,4 @@
-const {Signature, PublicKey} = require('eosjs-ecc')
+const {Signature, PublicKey} = require('enujs-ecc')
 const Fcbuffer = require('fcbuffer')
 const ByteBuffer = require('bytebuffer')
 const assert = require('assert')
@@ -11,10 +11,10 @@ const {
   joinAssetString, parseExtendedAsset
 } = require('./format')
 
-/** Configures Fcbuffer for EOS specific structs and types. */
+/** Configures Fcbuffer for ENU specific structs and types. */
 module.exports = (config = {}, extendedSchema) => {
   const structLookup = (lookupName, account) => {
-    const cachedCode = new Set(['eosio', 'eosio.token'])
+    const cachedCode = new Set(['enumivo', 'enu.token'])
     if(cachedCode.has(account)) {
       return structs[lookupName]
     }
@@ -36,7 +36,7 @@ module.exports = (config = {}, extendedSchema) => {
     throw new Error(`Missing ABI struct or action: ${lookupName}`)
   }
 
-  // If nodeos does not have an ABI setup for a certain action.type, it will throw
+  // If enunode does not have an ABI setup for a certain action.type, it will throw
   // an error: `Invalid cast from object_type to string` .. forceActionDataHex
   // may be used to until native ABI is added or fixed.
   const forceActionDataHex = config.forceActionDataHex != null ?
@@ -52,7 +52,7 @@ module.exports = (config = {}, extendedSchema) => {
 
   const {assetCache} = config
 
-  const eosTypes = {
+  const enuTypes = {
     name: ()=> [Name],
     public_key: () => [variant(PublicKeyEcc)],
 
@@ -65,7 +65,7 @@ module.exports = (config = {}, extendedSchema) => {
     signature: () => [variant(SignatureType)]
   }
 
-  const customTypes = Object.assign({}, eosTypes, config.customTypes)
+  const customTypes = Object.assign({}, enuTypes, config.customTypes)
   config = Object.assign({override}, {customTypes}, config)
 
   // Do not sort transaction actions
@@ -86,7 +86,7 @@ module.exports = (config = {}, extendedSchema) => {
 }
 
 /**
-  Name eos::types native.hpp
+  Name enu::types native.hpp
 */
 const Name = (validation) => {
   return {
@@ -176,7 +176,7 @@ const PublicKeyEcc = (validation) => {
 
     toObject (value) {
       if (validation.defaults && value == null) {
-        return 'EOS6MRy..'
+        return 'ENU6MRy..'
       }
       return value
     }
@@ -186,7 +186,7 @@ const PublicKeyEcc = (validation) => {
 /** @private */
 function precisionCache(assetCache, value) {
   const symbolInfo = parseExtendedAsset(value)
-  const contract = symbolInfo.contract || 'eosio.token'
+  const contract = symbolInfo.contract || 'enu.token'
 
   let precision
 
@@ -446,7 +446,7 @@ const ExtendedAsset = assetCache => (validation, baseTypes, customTypes) => {
           amount: '1.0000',
           precision: 4,
           symbol: 'SYS',
-          contract: 'eosio.token'
+          contract: 'enu.token'
         }
       }
 
@@ -494,7 +494,7 @@ const SignatureType = (validation, baseTypes) => {
 }
 
 const authorityOverride = ({
-  /** shorthand `EOS6MRyAj..` */
+  /** shorthand `ENU6MRyAj..` */
   'authority.fromObject': (value) => {
     if(PublicKey.fromString(value)) {
       return {
@@ -528,7 +528,7 @@ const abiOverride = structLookup => ({
     }
   },
   'setabi.abi.appendByteBuffer': ({fields, object, b}) => {
-    const ser = structLookup('abi_def', 'eosio')
+    const ser = structLookup('abi_def', 'enumivo')
     const b2 = new ByteBuffer(ByteBuffer.DEFAULT_CAPACITY, ByteBuffer.LITTLE_ENDIAN)
     ser.appendByteBuffer(b2, object.abi)
     b.writeVarint32(b2.offset) // length prefix

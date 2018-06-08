@@ -25,8 +25,8 @@ for (let { name, fields, ...rest } of abi.structs) {
 
     if (actions[name]) {
         const account =
-          contract === 'eosio.system' ? 'eosio' :
-          contract === 'eosio.bios' ? 'eosio' :
+          contract === 'enu.system' ? 'enumivo' :
+          contract === 'enu.bios' ? 'enumivo' :
           contract
 
         rest.action = {

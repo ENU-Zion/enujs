@@ -24,9 +24,9 @@ describe('format', () => {
     })
 
     it('encode / decode', () => {
-      assert.equal('12373', encodeName('eos'), 'encode')
-      assert.equal('3055', encodeNameHex('eos'), 'encode hex')
-      assert.equal(decodeName(encodeName('eos')), 'eos', 'decode')
+      assert.equal('12373', encodeName('enu'), 'encode')
+      assert.equal('3055', encodeNameHex('enu'), 'encode hex')
+      assert.equal(decodeName(encodeName('enu')), 'enu', 'decode')
 
       assert.equal('572d3ccdcd', encodeNameHex('transfer'), 'encode')
       assert.equal(decodeNameHex('572d3ccdcd'), 'transfer', 'decode')

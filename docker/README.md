@@ -1,16 +1,16 @@
-Dockerized eosio instance for development and testing.  This container
+Dockerized enumivo instance for development and testing.  This container
 is designed to reset its blockchain and wallet state upon shutdown.
 
-# Start nodeosd
+# Start enunoded
 
-Starting and stopping an eosio instance:
+Starting and stopping an enumivo instance:
 
 ```js
 ./up.sh
 docker-compose down
 ```
 
-# Load commands like `cleos`
+# Load commands like `enucli`
 
 ```bash
 . ./dockrc.sh
@@ -19,7 +19,7 @@ docker-compose down
 # Unit Test
 
 Run all unit test in a temporary instance.  Note, this script will run
-`npm install` in the eosjs directory.
+`npm install` in the enujs directory.
 
 `./run_tests.sh`
 
@@ -28,21 +28,21 @@ Run all unit test in a temporary instance.  Note, this script will run
 After ./up.sh
 
 ```bash
-docker exec docker_nodeosd_1 ls /opt/eosio/bin
-docker exec docker_nodeosd_1 ls /contracts
-docker cp docker_nodeosd_1:/opt/eosio/bin/nodeos .
+docker exec docker_enunoded_1 ls /opt/enumivo/bin
+docker exec docker_enunoded_1 ls /contracts
+docker cp docker_enunoded_1:/opt/enumivo/bin/enunode .
 
 # Or setup an environment:
 . ./dockerc.sh
-keosd ls /opt/eosio/bin
-cleos --help
+enuwallet ls /opt/enumivo/bin
+enucli --help
 ```
 
 # Stopped container
 
 ```bash
 # Note, update release
-docker run --rm -it eosio/eos:latest ls /opt/eosio/bin
-docker run -v "$(pwd):/share" --rm -it eosio/eos:latest cp /opt/eosio/bin/nodeos /share
+docker run --rm -it enumivo/enu:latest ls /opt/enumivo/bin
+docker run -v "$(pwd):/share" --rm -it enumivo/enu:latest cp /opt/enumivo/bin/enunode /share
 ```
 

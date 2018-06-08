@@ -10,7 +10,7 @@ function AbiCache(network, config) {
 
   /**
     @arg {boolean} force false when ABI is immutable.  When force is true, API
-    user is still free to cache the contract object returned by eosjs.
+    user is still free to cache the contract object returned by enujs.
   */
   function abiAsync(account, force = true) {
     assert(account, 'required account')

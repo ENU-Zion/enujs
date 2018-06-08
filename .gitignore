@@ -8,6 +8,6 @@ lib
 docker/.env
 docker/contracts
 dist/*.js
-bin/eosio.system.abi
-bin/eosio.token.abi
+bin/enu.system.abi
+bin/enu.token.abi
 docs/index.md

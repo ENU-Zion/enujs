@@ -6,9 +6,9 @@ try {
   }
 }
 
-const ecc = require('eosjs-ecc')
+const ecc = require('enujs-ecc')
 const Fcbuffer = require('fcbuffer')
-const EosApi = require('eosjs-api')
+const EnuApi = require('enujs-api')
 const assert = require('assert')
 
 const Structs = require('./structs')
@@ -25,7 +25,7 @@ const configDefaults = {
   sign: true
 }
 
-const Eos = (config = {}) => createEos(
+const Enu = (config = {}) => createEnu(
   Object.assign(
     {},
     {
@@ -37,18 +37,18 @@ const Eos = (config = {}) => createEos(
   )
 )
 
-module.exports = Eos
+module.exports = Enu
 
 Object.assign(
-  Eos,
+  Enu,
   {
     version: pkg.version,
     modules: {
       format,
-      api: EosApi,
+      api: EnuApi,
       ecc,
       json: {
-        api: EosApi.api,
+        api: EnuApi.api,
         schema
       },
       Fcbuffer
@@ -56,21 +56,21 @@ Object.assign(
 
     /** @deprecated */
     Testnet: function (config) {
-      console.error('deprecated, change Eos.Testnet(..) to just Eos(..)')
-      return Eos(config)
+      console.error('deprecated, change Enu.Testnet(..) to just Enu(..)')
+      return Enu(config)
     },
 
     /** @deprecated */
     Localnet: function (config) {
-      console.error('deprecated, change Eos.Localnet(..) to just Eos(..)')
-      return Eos(config)
+      console.error('deprecated, change Enu.Localnet(..) to just Enu(..)')
+      return Enu(config)
     }
   }
 )
 
 
-function createEos(config) {
-  const network = EosApi(config)
+function createEnu(config) {
+  const network = EnuApi(config)
   config.network = network
 
   config.assetCache = AssetCache(network)
@@ -91,9 +91,9 @@ function createEos(config) {
   }
 
   const {structs, types, fromBuffer, toBuffer} = Structs(config)
-  const eos = mergeWriteFunctions(config, EosApi, structs)
+  const enu = mergeWriteFunctions(config, EnuApi, structs)
 
-  Object.assign(eos, {fc: {
+  Object.assign(enu, {fc: {
     structs,
     types,
     fromBuffer,
@@ -101,10 +101,10 @@ function createEos(config) {
   }})
 
   if(!config.signProvider) {
-    config.signProvider = defaultSignProvider(eos, config)
+    config.signProvider = defaultSignProvider(enu, config)
   }
 
-  return eos
+  return enu
 }
 
 function consoleObjCallbackLog(verbose = false) {
@@ -128,18 +128,18 @@ function consoleObjCallbackLog(verbose = false) {
   name conflicts.
 
   @arg {object} config.network - read-only api calls
-  @arg {object} EosApi - api[EosApi] read-only api calls
+  @arg {object} EnuApi - api[EnuApi] read-only api calls
   @return {object} - read and write method calls (create and sign transactions)
   @throw {TypeError} if a funciton name conflicts
 */
-function mergeWriteFunctions(config, EosApi, structs) {
+function mergeWriteFunctions(config, EnuApi, structs) {
   assert(config.network, 'network instance required')
   const {network} = config
 
   const merge = Object.assign({}, network)
 
-  const writeApi = writeApiGen(EosApi, network, structs, config, schema)
-  throwOnDuplicate(merge, writeApi, 'Conflicting methods in EosApi and Transaction Api')
+  const writeApi = writeApiGen(EnuApi, network, structs, config, schema)
+  throwOnDuplicate(merge, writeApi, 'Conflicting methods in EnuApi and Transaction Api')
   Object.assign(merge, writeApi)
 
   return merge
@@ -161,7 +161,7 @@ function throwOnDuplicate(o1, o2, msg) {
   If only one key is available, the blockchain API calls are skipped and that
   key is used to sign the transaction.
 */
-const defaultSignProvider = (eos, config) => async function({sign, buf, transaction}) {
+const defaultSignProvider = (enu, config) => async function({sign, buf, transaction}) {
   const {keyProvider} = config
 
   if(!keyProvider) {
@@ -185,7 +185,7 @@ const defaultSignProvider = (eos, config) => async function({sign, buf, transact
       // normalize format (WIF => PVT_K1_base58privateKey)
       return {private: ecc.PrivateKey(key).toString()}
     } catch(e) {
-      // normalize format (EOSKey => PUB_K1_base58publicKey)
+      // normalize format (ENUKey => PUB_K1_base58publicKey)
       return {public: ecc.PublicKey(key).toString()}
     }
     assert(false, 'expecting public or private keys from keyProvider')
@@ -217,7 +217,7 @@ const defaultSignProvider = (eos, config) => async function({sign, buf, transact
 
   const pubkeys = Array.from(keyMap.keys())
 
-  return eos.getRequiredKeys(transaction, pubkeys).then(({required_keys}) => {
+  return enu.getRequiredKeys(transaction, pubkeys).then(({required_keys}) => {
     if(!required_keys.length) {
       throw new Error('missing required keys for ' + JSON.stringify(transaction))
     }
@@ -225,7 +225,7 @@ const defaultSignProvider = (eos, config) => async function({sign, buf, transact
     const pvts = [], missingKeys = []
 
     for(let requiredKey of required_keys) {
-      // normalize (EOSKey.. => PUB_K1_Key..)
+      // normalize (ENUKey.. => PUB_K1_Key..)
       requiredKey = ecc.PublicKey(requiredKey).toString()
 
       const wif = keyMap.get(requiredKey)

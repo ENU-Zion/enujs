@@ -1,8 +1,8 @@
 const schema = Object.assign(
   {},
   require('./chain_types.json'),
-  require('./eosio_system.json'),
-  require('./eosio_token.json')
+  require('./enu_system.json'),
+  require('./enu_token.json')
 )
 
 module.exports = schema
