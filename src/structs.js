@@ -184,7 +184,7 @@ const PublicKeyEcc = (validation) => {
 /**
   Internal: precision, symbol
   External: symbol
-  @example 'SYS'
+  @example 'ENU'
 */
 const Symbol = validation => {
   return {
@@ -225,7 +225,7 @@ const Symbol = validation => {
 
     toObject (value) {
       if (validation.defaults && value == null) {
-        return 'SYS'
+        return 'ENU'
       }
       // symbol only (without precision prefix)
       return parseAsset(value).symbol
@@ -236,7 +236,7 @@ const Symbol = validation => {
 /**
   Internal: precision, symbol, contract
   External: symbol, contract
-  @example 'SYS@contract'
+  @example 'ENU@contract'
 */
 const ExtendedSymbol = (validation, baseTypes, customTypes) => {
   const symbolType = customTypes.symbol(validation)
@@ -265,7 +265,7 @@ const ExtendedSymbol = (validation, baseTypes, customTypes) => {
 
     toObject (value) {
       if (validation.defaults && value == null) {
-        return 'SYS@contract'
+        return 'ENU@contract'
       }
       return value
     }
@@ -274,7 +274,7 @@ const ExtendedSymbol = (validation, baseTypes, customTypes) => {
 
 /**
   Internal: amount, precision, symbol, contract
-  @example '1.0000 SYS'
+  @example '1.0000 ENU'
 */
 const Asset = (validation, baseTypes, customTypes) => {
   const amountType = baseTypes.int64(validation)
@@ -314,7 +314,7 @@ const Asset = (validation, baseTypes, customTypes) => {
 
     toObject (value) {
       if (validation.defaults && value == null) {
-        return '0.0001 SYS'
+        return '0.0001 ENU'
       }
 
       const {amount, precision, symbol} = parseAsset(value)
@@ -328,7 +328,7 @@ const Asset = (validation, baseTypes, customTypes) => {
 }
 
 /**
-  @example '1.0000 SYS@contract'
+  @example '1.0000 ENU@contract'
 */
 const ExtendedAsset = (validation, baseTypes, customTypes) => {
   const assetType = customTypes.asset(validation)
@@ -355,7 +355,7 @@ const ExtendedAsset = (validation, baseTypes, customTypes) => {
     },
 
     fromObject (value) {
-      // like: 1.0000 SYS@contract or 1 SYS@contract
+      // like: 1.0000 ENU@contract or 1 ENU@contract
       const asset = {}
       if(typeof value === 'string') {
         Object.assign(asset, parseAsset(value))
@@ -379,7 +379,7 @@ const ExtendedAsset = (validation, baseTypes, customTypes) => {
         return {
           amount: '1.0000',
           precision: 4,
-          symbol: 'SYS',
+          symbol: 'ENU',
           contract: 'enu.token'
         }
       }

@@ -169,7 +169,7 @@ options = {
 ```
 
 ```js
-enu.transfer('alice', 'bob', '1.0000 SYS', '', options)
+enu.transfer('alice', 'bob', '1.0000 ENU', '', options)
 ```
 
 * **authorization** `[array<auth>|auth]` - identifies the
@@ -224,7 +224,7 @@ enu.transaction(
         data: {
           from: 'inita',
           to: 'initb',
-          quantity: '7.0000 SYS',
+          quantity: '7.0000 ENU',
           memo: ''
         }
       }
@@ -244,20 +244,20 @@ more frequently.  This avoids having lots of JSON in the code.
 enu.transfer()
 
 // Callback is last, when omitted a promise is returned
-enu.transfer('inita', 'initb', '1.0000 SYS', '', (error, result) => {})
-enu.transfer('inita', 'initb', '1.1000 SYS', '') // @returns {Promise}
+enu.transfer('inita', 'initb', '1.0000 ENU', '', (error, result) => {})
+enu.transfer('inita', 'initb', '1.1000 ENU', '') // @returns {Promise}
 
 // positional parameters
-enu.transfer('inita', 'initb', '1.2000 SYS', '')
+enu.transfer('inita', 'initb', '1.2000 ENU', '')
 
 // named parameters
-enu.transfer({from: 'inita', to: 'initb', quantity: '1.3000 SYS', memo: ''})
+enu.transfer({from: 'inita', to: 'initb', quantity: '1.3000 ENU', memo: ''})
 
 // options appear after parameters
 options = {broadcast: true, sign: true}
 
 // `false` is a shortcut for {broadcast: false}
-enu.transfer('inita', 'initb', '1.4000 SYS', '', false)
+enu.transfer('inita', 'initb', '1.4000 ENU', '', false)
 ```
 
 Read-write API methods and documentation are generated from the enumivo
@@ -275,7 +275,7 @@ objects to `enu.transaction`..
 
 For example:
 * permission `inita` defaults `inita@active`
-* authority `'EOS6MRy..'` expands `{threshold: 1, keys: [key: 'EOS6MRy..', weight: 1]}`
+* authority `'ENU6MRy..'` expands `{threshold: 1, keys: [key: 'ENU6MRy..', weight: 1]}`
 * authority `inita` expands `{{threshold: 1, accounts: [..actor: 'inita', permission: 'active', weight: 1]}}`
 
 ### New Account
@@ -303,8 +303,8 @@ enu.transaction(tr => {
   tr.delegatebw({
     from: 'enumivo',
     receiver: 'myaccount',
-    stake_net_quantity: '10.0000 SYS',
-    stake_cpu_quantity: '10.0000 SYS',
+    stake_net_quantity: '10.0000 ENU',
+    stake_cpu_quantity: '10.0000 ENU',
     transfer: 0
   })
 })
@@ -394,8 +394,8 @@ Other ways to use contracts and transactions.
   // if either transfer fails, both will fail (1 transaction, 2 messages)
   await enu.transaction(enu =>
     {
-      enu.transfer('inita', 'initb', '1.0000 SYS', ''/*memo*/)
-      enu.transfer('inita', 'initc', '1.0000 SYS', ''/*memo*/)
+      enu.transfer('inita', 'initb', '1.0000 ENU', ''/*memo*/)
+      enu.transfer('inita', 'initc', '1.0000 ENU', ''/*memo*/)
       // Returning a promise is optional (but handled as expected)
     }
     // [options],
@@ -410,7 +410,7 @@ Other ways to use contracts and transactions.
   // mix contracts in the same transaction
   await enu.transaction(['myaccount', 'enu.token'], ({myaccount, enu_token}) => {
     myaccount.transfer('inita', 'initb', '1.000 TOK@myaccount', '')
-    enu_token.transfer('inita', 'initb', '1.0000 SYS', '')
+    enu_token.transfer('inita', 'initb', '1.0000 ENU', '')
   })
 
   // The contract method does not take an array so must be called once for
@@ -458,7 +458,7 @@ assert.deepEqual(type, enu.fc.fromBuffer('extensions_type', buffer))
 
 // ABI Serialization
 enu.contract('enu.token', (error, enu_token) => {
-  create = {issuer: 'inita', maximum_supply: '1.0000 SYS'}
+  create = {issuer: 'inita', maximum_supply: '1.0000 ENU'}
   buffer = enu_token.fc.toBuffer('create', create)
   assert.deepEqual(create, enu_token.fc.fromBuffer('create', buffer))
 })

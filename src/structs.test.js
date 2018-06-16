@@ -119,7 +119,7 @@ describe('Action.data', () => {
       data: {
         from: 'inita',
         to: 'initb',
-        quantity: '1.0000 SYS',
+        quantity: '1.0000 ENU',
         memo: ''
       },
       authorization: []
@@ -136,7 +136,7 @@ describe('Action.data', () => {
       data: {
         from: 'inita',
         to: 'initb',
-        quantity: '1.0000 SYS',
+        quantity: '1.0000 ENU',
         memo: ''
       },
       authorization: []

@@ -10,7 +10,7 @@ const format = require('./format')
 const schema = require('./schema')
 const pkg = require('../package.json')
 
-const Eos = (config = {}) => {
+const Enu = (config = {}) => {
   config = Object.assign({}, {
     httpEndpoint: 'http://127.0.0.1:8888',
     debug: false,

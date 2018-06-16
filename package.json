@@ -1,7 +1,7 @@
 {
   "name": "enujs",
   "version": "15.0.0",
-  "description": "General purpose library for the EOS blockchain.",
+  "description": "General purpose library for the Enumivo blockchain.",
   "main": "lib/index.js",
   "scripts": {
     "test": "mocha --use_strict src/*.test.js",
