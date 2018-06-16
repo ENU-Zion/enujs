@@ -1,7 +1,7 @@
 {
   "name": "enujs",
-  "version": "14.1.1",
-  "description": "General purpose library for the ENU blockchain.",
+  "version": "15.0.0",
+  "description": "General purpose library for the EOS blockchain.",
   "main": "lib/index.js",
   "scripts": {
     "test": "mocha --use_strict src/*.test.js",
@@ -30,9 +30,10 @@
   "homepage": "https://github.com/enumivo/enujs#readme",
   "devDependencies": {
     "babel-cli": "^6.26.0",
-    "babel-core": "^6.26.0",
+    "babel-core": "^6.26.3",
     "babel-plugin-syntax-async-functions": "^6.13.0",
     "babel-plugin-transform-regenerator": "^6.26.0",
+    "babel-plugin-transform-runtime": "^6.23.0",
     "babel-preset-es2015": "^6.24.1",
     "browserify": "^14.4.0",
     "camel-case": "^3.0.0",
@@ -43,10 +44,10 @@
     "nyc": "^11.4.1"
   },
   "dependencies": {
-    "babel-polyfill": "^6.26.0",
+    "babel-runtime": "^6.26.0",
     "binaryen": "^37.0.0",
     "create-hash": "^1.1.3",
-    "enujs-api": "6.1.4",
+    "enujs-api": "6.2.1",
     "enujs-ecc": "4.0.1",
     "fcbuffer": "2.2.0"
   },
@@ -56,7 +57,14 @@
     ],
     "plugins": [
       "syntax-async-functions",
-      "transform-regenerator"
+      "transform-regenerator",
+      [
+        "transform-runtime",
+        {
+          "polyfill": false,
+          "regenerator": true
+        }
+      ]
     ]
   }
 }

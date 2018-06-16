@@ -11,3 +11,4 @@ dist/*.js
 bin/enu.system.abi
 bin/enu.token.abi
 docs/index.md
+dev

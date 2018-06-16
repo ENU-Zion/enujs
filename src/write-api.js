@@ -4,7 +4,6 @@ const Fcbuffer = require('fcbuffer')
 const createHash = require('create-hash')
 const {processArgs} = require('enujs-api')
 const Structs = require('./structs')
-const AssetCache = require('./asset-cache')
 
 module.exports = writeApiGen
 
@@ -45,7 +44,7 @@ function writeApiGen(Network, network, structs, config, schemaDef) {
     Immedate send contract actions.
 
     @example enu.contract('mycontract', [options], [callback])
-    @example enu.contract('mycontract').then(mycontract => mycontract.action(...))
+    @example enu.contract('mycontract').then(mycontract => mycontract.myaction(...))
   */
   merge.contract = (...args) => {
     const {params, options, returnPromise, callback} =
@@ -95,7 +94,7 @@ function WriteApi(Network, network, config, Transaction) {
 
       const abiPromises = []
       // Enu contract operations are cached (efficient and offline transactions)
-      const cachedCode = new Set(['enumivo', 'enu.token'])
+      const cachedCode = new Set(['enumivo', 'enu.token', 'enu.null'])
       accounts.forEach(account => {
         if(!cachedCode.has(account)) {
           abiPromises.push(config.abiCache.abiAsync(account))
@@ -167,7 +166,7 @@ function WriteApi(Network, network, config, Transaction) {
   function genMethod(type, definition, transactionArg, account = 'enu.token', name = type) {
     return function (...args) {
       if (args.length === 0) {
-        console.error(usage(type, definition, Network, account, config))
+        console.log(usage(type, definition, Network, account, config))
         return
       }
 
@@ -354,14 +353,15 @@ function WriteApi(Network, network, config, Transaction) {
       throw new TypeError('Expecting actions array')
     }
 
-    if(config.transactionLog) {
+    if(config.logger.log || config.logger.error) {
       // wrap the callback with the logger
       const superCallback = callback
       callback = (error, tr) => {
-        if(error) {
-          config.transactionLog(error)
-        } else {
-          config.transactionLog(null, tr)
+        if(error && config.logger.error) {
+          config.logger.error(error)
+        }
+        if(config.logger.log){
+          config.logger.log(JSON.stringify(tr))
         }
         superCallback(error, tr)
       }
@@ -377,11 +377,42 @@ function WriteApi(Network, network, config, Transaction) {
       throw new TypeError('Expecting config.signProvider function (disable using {sign: false})')
     }
 
-    const headers = config.transactionHeaders ?
-      config.transactionHeaders :
-      network.createTransaction
+    let argHeaders = null
+    if( // minimum required headers
+      arg.expiration != null &&
+      arg.ref_block_num != null &&
+      arg.ref_block_prefix != null
+    ) {
+      const {
+        expiration,
+        ref_block_num,
+        ref_block_prefix,
+        net_usage_words = 0,
+        max_cpu_usage_ms = 0,
+        delay_sec = 0
+      } = arg
+      argHeaders = {
+        expiration,
+        ref_block_num,
+        ref_block_prefix,
+        net_usage_words,
+        max_cpu_usage_ms,
+        delay_sec
+      }
+    }
 
-    headers(options.expireInSeconds, checkError(callback, async function(rawTx) {
+    let headers
+    if(argHeaders) {
+      headers = (expireInSeconds, callback) => callback(null, argHeaders)
+    } else if(config.transactionHeaders) {
+      assert.equal(typeof config.transactionHeaders, 'function', 'config.transactionHeaders')
+      headers = config.transactionHeaders
+    } else {
+      assert(network, 'Network is required, provide config.httpEndpoint')
+      headers = network.createTransaction
+    }
+
+    headers(options.expireInSeconds, checkError(callback, config.logger, async function(rawTx) {
       // console.log('rawTx', rawTx)
       assert.equal(typeof rawTx, 'object', 'expecting transaction header object')
       assert.equal(typeof rawTx.expiration, 'string', 'expecting expiration: iso date time string')
@@ -392,16 +423,8 @@ function WriteApi(Network, network, config, Transaction) {
 
       rawTx.actions = arg.actions
 
-      // Resolve shorthand, queue requests
-      let txObject = Transaction.fromObject(rawTx)
-
-      // After fromObject ensure any async actions are finished
-      if(AssetCache.pending()) {
-        await AssetCache.resolve()
-
-        // Create the object again with resolved data
-        txObject = Transaction.fromObject(rawTx)
-      }
+      // Resolve shorthand
+      const txObject = Transaction.fromObject(rawTx)
 
       const buf = Fcbuffer.toBuffer(Transaction, txObject)
       const tr = Transaction.toObject(txObject)
@@ -448,13 +471,18 @@ function WriteApi(Network, network, config, Transaction) {
             })
           }
           if(mock === 'fail') {
-            console.error(`[push_transaction mock error] 'fake error', digest '${buf.toString('hex')}'`)
-            callback('fake error')
+            const error = `[push_transaction mock error] 'fake error', digest '${buf.toString('hex')}'`
+
+            if(config.logger.error) {
+              config.logger.error(error)
+            }
+
+            callback(error)
           }
           return
         }
 
-        if(!options.broadcast) {
+        if(!options.broadcast || !network) {
           callback(null, {
             transaction_id: transactionId,
             broadcast: false,
@@ -469,13 +497,21 @@ function WriteApi(Network, network, config, Transaction) {
                 transaction: packedTr
               })
             } else {
-              console.error(`[push_transaction error] '${error.message}', transaction '${buf.toString('hex')}'`)
+
+              if(config.logger.error) {
+                config.logger.error(
+                  `[push_transaction error] '${error.message}', transaction '${buf.toString('hex')}'`
+                )
+              }
+
               callback(error.message)
             }
           })
         }
       }).catch(error => {
-        console.error(error)
+        if(config.logger.error) {
+          config.logger.error(error)
+        }
         callback(error)
       })
     }))
@@ -550,9 +586,11 @@ function usage (type, definition, Network, account, config) {
   return usage
 }
 
-const checkError = (parentErr, parrentRes) => (error, result) => {
+const checkError = (parentErr, logger, parrentRes) => (error, result) => {
   if (error) {
-    console.log('error', error)
+    if(logger.error) {
+      logger.error('error', error)
+    }
     parentErr(error)
   } else {
     Promise.resolve(parrentRes(result)).catch(error => {
