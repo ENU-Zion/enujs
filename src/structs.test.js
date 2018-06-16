@@ -4,7 +4,6 @@ const Fcbuffer = require('fcbuffer')
 const ByteBuffer = require('bytebuffer')
 
 const Enu = require('.')
-const AssetCache = require('./asset-cache')
 
 describe('shorthand', () => {
 
@@ -58,29 +57,27 @@ describe('shorthand', () => {
     const enu = Enu()
     const {types} = enu.fc
     const Symbol = types.symbol()
-
-    assertSerializer(Symbol, '4,SYS', '4,SYS', 'SYS')
+    assertSerializer(Symbol, '4,ENU', '4,ENU', 'ENU')
   })
 
   it('extended_symbol', () => {
     const enu = Enu({defaults: true})
     const esType = enu.fc.types.extended_symbol()
-    const esString = esType.toObject()
-    assertSerializer(esType, esString)
+    // const esString = esType.toObject()
+    assertSerializer(esType, '4,ENU@contract')
   })
 
   it('asset', () => {
     const enu = Enu()
     const {types} = enu.fc
-    const AssetType = types.asset()
-    assertSerializer(AssetType, '1.1 4,SYS@enu.token', '1.1000 SYS@enu.token', '1.1000 SYS')
+    const aType = types.asset()
+    assertSerializer(aType, '1.0001 ENU')
   })
 
   it('extended_asset', () => {
     const enu = Enu({defaults: true})
     const eaType = enu.fc.types.extended_asset()
-    const eaObject = eaType.fromObject('1.0000 4,SYS@enu.token')
-    assertSerializer(eaType, eaObject)
+    assertSerializer(eaType, eaType.toObject())
   })
 
   it('signature', () => {
@@ -122,7 +119,7 @@ describe('Action.data', () => {
       data: {
         from: 'inita',
         to: 'initb',
-        quantity: '1.0000 SYS',
+        quantity: '1.0000 ENU',
         memo: ''
       },
       authorization: []
@@ -139,7 +136,7 @@ describe('Action.data', () => {
       data: {
         from: 'inita',
         to: 'initb',
-        quantity: '1.0000 SYS',
+        quantity: '1.0000 ENU',
         memo: ''
       },
       authorization: []

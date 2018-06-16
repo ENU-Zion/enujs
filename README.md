@@ -1,302 +1,430 @@
 # Enujs
 
-General purpose library for the ENU blockchain.
+General purpose library for Enumivo blockchains.
 
-### Usage (read-only)
+### Usage
 
-```javascript
-Enu = require('enujs') // Enu = require('./src')
+Ways to instantiate enujs.
 
-enu = Enu() // 127.0.0.1:8888
+```js
+Enu = require('enujs')
 
-// All API methods print help when called with no-arguments.
-enu.getBlock()
+// Private key or keys (array) provided statically or by way of a function.
+// For multiple keys, the get_required_keys API is used (more on that below).
+keyProvider: '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3'
 
-// Next, your going to need enunoded running on localhost:8888 (see ./docker)
+// Localhost Testnet (run ./docker/up.sh)
+enu = Enu({keyProvider})
 
-// If a callback is not provided, a Promise is returned
-enu.getBlock(1).then(result => {console.log(result)})
+// Connect to a testnet or mainnet
+enu = Enu({httpEndpoint, chainId, keyProvider})
 
-// Parameters can be sequential or an object
-enu.getBlock({block_num_or_id: 1}).then(result => console.log(result))
+// Cold-storage
+enu = Enu({httpEndpoint: null, chainId, keyProvider})
 
-// Callbacks are similar
-callback = (err, res) => {err ? console.error(err) : console.log(res)}
-enu.getBlock(1, callback)
-enu.getBlock({block_num_or_id: 1}, callback)
+// Read-only instance when 'enujs' is already a dependency
+enu = Enu.modules.api({/*config*/})
 
-// Provide an empty object or a callback if an API call has no arguments
-enu.getInfo({}).then(result => {console.log(result)})
+// Read-only instance when an application never needs to write (smaller library)
+EnuApi = require('enujs-api')
+enu = EnuApi({/*config*/})
 ```
 
-API methods and documentation are generated from:
+No-arguments prints usage.
+
+```js
+enu.getBlock()
+```
+```json
+USAGE
+getBlock - Fetch a block from the blockchain.
+
+PARAMETERS
+{
+  "block_num_or_id": "string"
+}
+```
+
+Start a enunoded process.  The docker in this repository provides a setup
+the supports the examples in this README.
+
+```bash
+cd ./docker && ./up.sh
+```
+
+All functions read only or transactional follow this pattern for parameters.
+
+```js
+// If the last argument is a function it is treated as a callback
+enu.getBlock(1, (error, result) => {})
+
+// If a callback is not provided, a Promise is returned
+enu.getBlock(1) // @returns {Promise}
+
+// Parameters can be positional or an object
+enu.getBlock({block_num_or_id: 1})
+
+// An API with no parameters is invoked with an empty object or callback (avoids logging usage)
+enu.getInfo({}) // @returns {Promise}
+enu.getInfo((error, result) => { console.log(error, result) })
+```
+
+Chain and history API functions are available after creating the `enu` object.
+API methods and documentation are generated from the chain and history json files.
+
 * [chain.json](https://github.com/enumivo/enujs-api/blob/master/src/api/v1/chain.json)
 * [history.json](https://github.com/enumivo/enujs-api/blob/master/src/api/v1/history.json)
+
+Until we generate a markdown for these, please convert the names in these
+json to camel case functions.
+
+* `"get_info": ..` is `enu.getInfo(..)`
 
 ### Configuration
 
 ```js
-Enu = require('enujs') // Enu = require('./src')
+Enu = require('enujs')
 
-// Optional configuration..
+// Default configuration (additional options below)
 config = {
   chainId: null, // 32 byte (64 char) hex string
   keyProvider: ['PrivateKeys...'], // WIF string or array of keys..
   httpEndpoint: 'http://127.0.0.1:8888',
-  mockTransactions: () => 'pass', // or 'fail'
-  transactionHeaders: (expireInSeconds, callback) => {
-    callback(null/*error*/, headers)
-  },
   expireInSeconds: 60,
   broadcast: true,
-  debug: false, // API and transactions
+  verbose: false, // API activity
   sign: true
 }
 
 enu = Enu(config)
 ```
 
-* **chainId** - Unique ID for the blockchain your connecting too.  This is
-  required for valid transaction signing.  The chainId is provided via the
+* **chainId** `hex` - Unique ID for the blockchain you're connecting too.  This
+  is required for valid transaction signing.  The chainId is provided via the
   [get_info](http://ayeaye.cypherglass.com:8888/v1/chain/get_info) API call.
 
-* `mockTransactions` (optional)
+  Identifies a chain by its initial genesis block.  All transactions signed will
+  only be valid the blockchain with this chainId.  Verify the chainId for
+  security reasons.
+
+* **keyProvider** `[array<string>|string|function]` - Provides private keys
+  used to sign transaction.  If multiple private keys are found, the API
+  `get_required_keys` is called to discover which signing keys to use.  If a
+  function is provided, this function is called for each transaction.
+
+* **httpEndpoint** `string` - http or https location of a enunoded server
+  providing a chain API.  When using enujs from a browser remember to configure
+  the same origin policy in enunoded or proxy server.  For testing, enunoded
+  configuration `access-control-allow-origin = *` could be used.
+
+  Set this value to **null** for a cold-storage (no network) configuration.
+
+* **expireInSeconds** `number` - number of seconds before the transaction
+  will expire.  The time is based on the enunoded's clock.  An unexpired
+  transaction that may have had an error is a liability until the expiration
+  is reached, this time should be brief.
+
+* **broadcast** `[boolean=true]` - post the transaction to
+  the blockchain.  Use false to obtain a fully signed transaction.
+
+* **verbose** `[boolean=false]` - verbose logging such as API activity.
+
+* **debug** `[boolean=false]` - low level debug logging (serialization).
+
+* **sign** `[boolean=true]` - sign the transaction with a private key.  Leaving
+  a transaction unsigned avoids the need to provide a private key.
+
+* **mockTransactions** (advanced)
+  * `mockTransactions: () => null // 'pass',  or 'fail'`
   * `pass` - do not broadcast, always pretend that the transaction worked
   * `fail` - do not broadcast, pretend the transaction failed
   * `null|undefined` - broadcast as usual
 
-* `transactionHeaders` (optional) - manually calculate transaction header.  This
+* **transactionHeaders** (advanced) - manually calculate transaction header.  This
   may be provided so enujs does not need to make header related API calls to
-  enunode.  This callback is called for every transaction.
-  Headers are documented here [enujs-api#headers](https://github.com/enumivo/enujs-api/blob/HEAD/docs/index.md#headers--object).
+  enunode.  Used in environments like cold-storage.  This callback is called for
+  every transaction. Headers are documented here [enujs-api#headers](https://github.com/enumivo/enujs-api/blob/HEAD/docs/index.md#headers--object).
+  * `transactionHeaders: (expireInSeconds, callback) => {callback(null/*error*/, headers)}`
+
+* **logger** - default logging configuration.
+  ```js
+  logger: {
+    log: config.verbose ? console.log : null,
+    error: console.error // null to disable
+  }
+  ```
+
+  Turn off all error logging: `config.logger = {error: null}`
 
 ### Options
 
-Options may be provided immediately after parameters.
-
-Example: `enu.transfer(params, options)`
+Options may be provided after parameters.
 
 ```js
 options = {
+  authorization: 'alice@active',
   broadcast: true,
-  sign: true,
-  authorization: null
+  sign: true
 }
 ```
 
-* **authorization** `{array<auth>|auth}` - identifies the
-  signing account and permission typically in a multi-sig
+```js
+enu.transfer('alice', 'bob', '1.0000 ENU', '', options)
+```
+
+* **authorization** `[array<auth>|auth]` - identifies the
+  signing account and permission typically in a multisig
   configuration.  Authorization may be a string formatted as
   `account@permission` or an `object<{actor: account, permission}>`.
   * If missing default authorizations will be calculated.
   * If provided additional authorizations will not be added.
-  * Sorting is always performed (by account name).
+  * Performs deterministic sorting by account name
 
-### Usage (read/write)
+  If a default authorization is calculated the action's 1st field must be
+  an account_name.  The account_name in the 1st field gets added as the
+  active key authorization for the action.
 
-You'll need to provide the private key in keyProvider.
+* **broadcast** `[boolean=true]` - post the transaction to
+  the blockchain.  Use false to obtain a fully signed transaction.
+
+* **sign** `[boolean=true]` - sign the transaction with a private key.  Leaving
+  a transaction unsigned avoids the need to provide a private key.
+
+### Transaction
+
+The transaction function accepts the standard blockchain transaction.
+
+Required transaction header fields will be added unless your signing without a
+network connection (httpEndpoint == null). In that case provide you own headers:
+
+```js
+// only needed in cold-storage or for offline transactions
+const headers = {
+  expiration: '2018-06-14T18:16:10'
+  ref_block_num: 1,
+  ref_block_prefix: 452435776
+}
+```
+
+Create and send (broadcast) a transaction:
 
 ```javascript
-Enu = require('enujs') // Enu = require('./src')
+/** @return {Promise} */
+enu.transaction(
+  {
+    // ...headers,
+    actions: [
+      {
+        account: 'enu.token',
+        name: 'transfer',
+        authorization: [{
+          actor: 'inita',
+          permission: 'active'
+        }],
+        data: {
+          from: 'inita',
+          to: 'initb',
+          quantity: '7.0000 ENU',
+          memo: ''
+        }
+      }
+    ]
+  }
+  // options -- example: {broadcast: false}
+)
+```
 
-enu = Enu({keyProvider: '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3'})
+### Named action functions
 
+More concise functions are provided for applications that may use actions
+more frequently.  This avoids having lots of JSON in the code.
+
+```javascript
 // Run with no arguments to print usage.
 enu.transfer()
 
-// Usage with options (options are always optional)
-options = {broadcast: false}
+// Callback is last, when omitted a promise is returned
+enu.transfer('inita', 'initb', '1.0000 ENU', '', (error, result) => {})
+enu.transfer('inita', 'initb', '1.1000 ENU', '') // @returns {Promise}
 
-enu.transfer({from: 'inita', to: 'initb', quantity: '1 SYS', memo: ''}, options)
+// positional parameters
+enu.transfer('inita', 'initb', '1.2000 ENU', '')
 
-// Object or ordered args may be used.
-enu.transfer('inita', 'initb', '2 SYS', 'memo', options)
+// named parameters
+enu.transfer({from: 'inita', to: 'initb', quantity: '1.3000 ENU', memo: ''})
 
-// A broadcast boolean may be provided as a shortcut for {broadcast: false}
-enu.transfer('inita', 'initb', '1 SYS', '', false)
+// options appear after parameters
+options = {broadcast: true, sign: true}
+
+// `false` is a shortcut for {broadcast: false}
+enu.transfer('inita', 'initb', '1.4000 ENU', '', false)
 ```
 
-Read-write API methods and documentation are generated from the [enu_system](https://github.com/enumivo/enujs/blob/master/src/schema/enu_token.json) schema.
+Read-write API methods and documentation are generated from the enumivo
+[token](https://github.com/enumivo/enujs/blob/master/src/schema/enu_token.json) and
+[system](https://github.com/enumivo/enujs/blob/master/src/schema/enumivo_system.json).
 
-For more advanced signing, see `keyProvider` in
-[enujs-keygen](https://github.com/enumivo/enujs-keygen) or
-[unit test](https://github.com/enumivo/enujs/blob/master/src/index.test.js).
+For more advanced signing, see `keyProvider` and `signProvider` in
+[index.test.js](https://github.com/enumivo/enujs/blob/master/src/index.test.js).
 
 ### Shorthand
 
-Shorthand is available for some types such as Asset and Authority.
+Shorthand is available for some types such as Asset and Authority.  This syntax
+is only for concise functions and does not work when providing entire transaction
+objects to `enu.transaction`..
 
 For example:
-* stake_net_quantity: `'1 SYS'` is shorthand for `1.0000 SYS`
-* owner: `'ENU6MRy..'` is shorthand for `{threshold: 1, keys: [key: 'ENU6MRy..', weight: 1]}`
-* active: `inita` or `inita@active` is shorthand for
-  * `{{threshold: 1, accounts: [..actor: inita, permission: active, weight: 1]}}`
-  * `inita@other` would replace the permission `active` with `other`
+* permission `inita` defaults `inita@active`
+* authority `'ENU6MRy..'` expands `{threshold: 1, keys: [key: 'ENU6MRy..', weight: 1]}`
+* authority `inita` expands `{{threshold: 1, accounts: [..actor: 'inita', permission: 'active', weight: 1]}}`
 
+### New Account
+
+New accounts will likely require some staked tokens for RAM and bandwidth.
 
 ```javascript
-Enu = require('enujs') // Enu = require('./src')
-
 wif = '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3'
 pubkey = 'ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
 
-enu = Enu({keyProvider: wif})
-
 enu.transaction(tr => {
   tr.newaccount({
-    creator: 'inita',
-    name: 'mycontract11',
+    creator: 'enumivo',
+    name: 'myaccount',
     owner: pubkey,
     active: pubkey
   })
+
   tr.buyrambytes({
-    payer: 'inita',
-    receiver: 'mycontract11',
+    payer: 'enumivo',
+    receiver: 'myaccount',
     bytes: 8192
   })
+
   tr.delegatebw({
-    from: 'inita',
-    receiver: 'mycontract11',
-    stake_net_quantity: '100.0000 SYS',
-    stake_cpu_quantity: '100.0000 SYS',
+    from: 'enumivo',
+    receiver: 'myaccount',
+    stake_net_quantity: '10.0000 ENU',
+    stake_cpu_quantity: '10.0000 ENU',
     transfer: 0
   })
 })
-
 ```
 
 ### Contract
 
-Deploy a smart contract.
+Deploy and call smart contracts.
 
-The `setcode` command accepts WASM text and converts this to binary before
-signing and broadcasting.  For this, the Binaryen library is used.  Because
-this is a large library it is not included in `enujs` by default.
+#### Compile
 
-Add binaryen to your project:
+If you're loading a **wasm** file, you do not need binaryen. If you're loading
+a **wast** file you can include and configure the binaryen compiler, this is
+used to compile to **wasm** automatically when calling **setcode**.
+
+Versions of binaryen may be [problematic](https://github.com/enumivo/enu/issues/2187).
 
 ```bash
-npm i binaryen@37.0.0
+$ npm install binaryen@37.0.0
 ```
 
-Although the ENU back-end does seek to be up-to-date and have
-binaryen backwards compatibility, new versions of binaryen may be
-[problematic](https://github.com/enumivo/enu/issues/2187).
-
-Import and include the library when you configure Enu:
-
-```javascript
+```js
 binaryen = require('binaryen')
-enu = Enu({..., binaryen})
+enu = Enu({keyProvider, binaryen})
 ```
 
-Complete example:
+#### Deploy
 
 ```javascript
-Enu = require('enujs') // Enu = require('./src')
-
-keyProvider = '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3'
-
-// If your loading a wasm file, you do not need binaryen.  If your loading
-// a "wast" file you can include and configure the binaryen compiler:
-//
-// $ npm install binaryen@37.0.0
-// binaryen = require('binaryen')
-// enu = Enu({keyProvider, binaryen})
-
-enu = Enu({keyProvider})
-
 wasm = fs.readFileSync(`docker/contracts/enu.token/enu.token.wasm`)
 abi = fs.readFileSync(`docker/contracts/enu.token/enu.token.abi`)
 
 // Publish contract to the blockchain
-enu.setcode('inita', 0, 0, wasm)
-enu.setabi('inita', JSON.parse(abi))
-
-// Error reading contract; https://github.com/enumivo/enu/issues/3159
-enu.contract('inita').then(c => inita = c)
-inita.create('inita', '1000.0000 CUR', {authorization: 'inita'})
+enu.setcode('myaccount', 0, 0, wasm) // @returns {Promise}
+enu.setabi('myaccount', JSON.parse(abi)) // @returns {Promise}
 ```
 
-### Atomic Operations
+#### Fetch a smart contract
 
-Blockchain level atomic operations.  All will pass or fail.
+```js
+// @returns {Promise}
+enu.contract('myaccount', [options], [callback])
 
-```javascript
-Enu = require('enujs') // Enu = require('./src')
+// Run immediately, `myaction` returns a Promise
+enu.contract('myaccount').then(myaccount => myaccount.myaction(..))
 
-keyProvider = [
-  '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
-  Enu.modules.ecc.seedPrivate('currency')
-]
+// Group actions. `transaction` returns a Promise but `myaction` does not
+enu.transaction('myaccount', myaccount => { myaccount.myaction(..) })
 
-enu = Enu({keyProvider})
-
-// if either transfer fails, both will fail (1 transaction, 2 messages)
-enu.transaction(enu =>
-  {
-    enu.transfer('inita', 'initb', '1 SYS', '')
-    enu.transfer('inita', 'initc', '1 SYS', '')
-    // Returning a promise is optional (but handled as expected)
-  }
-  // [options],
-  // [callback]
-)
-
-// transaction on a single contract
-enu.transaction('currency', currency => {
-  currency.transfer('inita', 'initb', '1 CUR', '')
+// Transaction with multiple contracts
+enu.transaction(['myaccount', 'myaccount2'], ({myaccount, myaccount2}) => {
+   myaccount.myaction(..)
+   myaccount2.myaction(..)
 })
+```
 
-// mix contracts in the same transaction
-enu.transaction(['currency', 'enu.token'], ({currency, enu_token}) => {
-  currency.transfer('inita', 'initb', '1 CUR', '')
-  enu_token.transfer('inita', 'initb', '1 SYS', '')
-})
+#### Custom Token
 
-// contract lookups then transactions
-enu.contract('currency').then(currency => {
-  currency.transaction(cur => {
-    cur.transfer('inita', 'initb', '1 CUR', '')
-    cur.transfer('initb', 'initc', '1 CUR', '')
+```js
+(async function() {
+
+  // more on the contract / transaction syntax below
+
+  await enu.transaction('myaccount', myaccount => {
+
+    // Create the initial token with its max supply
+    // const options = {authorization: 'myaccount'} // default
+    myaccount.create('myaccount', '10000000.000 TOK')//, options)
+
+    // Issue some of the max supply for circulation into an arbitrary account
+    myaccount.issue('myaccount', '10000.000 TOK', 'issue')
   })
-  currency.transfer('inita', 'initb', '1 CUR', '')
-})
 
-// Note, the contract method does not take an array.  Just use Await or yield
-// if multiple contracts are needed outside of a transaction.
+  const balance = await enu.getCurrencyBalance('myaccount', 'myaccount', 'TOK')
+  console.log('Currency Balance', balance)
 
+})()
 ```
 
-### Usage (manual)
+### Calling Actions
 
-A manual transaction provides for more flexibility.
+Other ways to use contracts and transactions.
 
 ```javascript
-Enu = require('enujs') // Enu = require('./src')
+(async function() {
 
-enu = Enu({keyProvider: '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3'})
-
-// returns Promise
-enu.transaction({
-  actions: [
+  // if either transfer fails, both will fail (1 transaction, 2 messages)
+  await enu.transaction(enu =>
     {
-      account: 'enu.token',
-      name: 'transfer',
-      authorization: [{
-        actor: 'inita',
-        permission: 'active'
-      }],
-      data: {
-        from: 'inita',
-        to: 'initb',
-        quantity: '7 SYS',
-        memo: ''
-      }
+      enu.transfer('inita', 'initb', '1.0000 ENU', ''/*memo*/)
+      enu.transfer('inita', 'initc', '1.0000 ENU', ''/*memo*/)
+      // Returning a promise is optional (but handled as expected)
     }
-  ]
-})
+    // [options],
+    // [callback]
+  )
 
+  // transaction on a single contract
+  await enu.transaction('myaccount', myaccount => {
+    myaccount.transfer('myaccount', 'inita', '10.000 TOK@myaccount', '')
+  })
+
+  // mix contracts in the same transaction
+  await enu.transaction(['myaccount', 'enu.token'], ({myaccount, enu_token}) => {
+    myaccount.transfer('inita', 'initb', '1.000 TOK@myaccount', '')
+    enu_token.transfer('inita', 'initb', '1.0000 ENU', '')
+  })
+
+  // The contract method does not take an array so must be called once for
+  // each contract that is needed.
+  const myaccount = await enu.contract('myaccount')
+  await myaccount.transfer('myaccount', 'inita', '1.000 TOK', '')
+
+  // a transaction to a contract instance can specify multiple actions
+  await myaccount.transaction(myaccountTr => {
+    myaccountTr.transfer('inita', 'initb', '1.000 TOK', '')
+    myaccountTr.transfer('initb', 'inita', '1.000 TOK', '')
+  })
+
+})()
 ```
 
 # Development
@@ -306,15 +434,19 @@ so you may need to start `enunode` with the `--skip-transaction-signatures` para
 to get your transactions to pass.
 
 Note, `package.json` has a "main" pointing to `./lib`.  The `./lib` folder is for
-es2015 code built in a separate step.  If your changing and testing code,
+es2015 code built in a separate step. If you're changing and testing code,
 import from `./src` instead.
 
 ```javascript
 Enu = require('./src')
-enu = Enu()
+
+// forceActionDataHex = false helps transaction readability but may trigger back-end bugs
+config = {verbose: true, debug: false, broadcast: true, forceActionDataHex: true, keyProvider}
+
+enu = Enu(config)
 ```
 
-* Fcbuffer
+#### Fcbuffer
 
 The `enu` instance can provide serialization:
 
@@ -325,13 +457,14 @@ buffer = enu.fc.toBuffer('extensions_type', type)
 assert.deepEqual(type, enu.fc.fromBuffer('extensions_type', buffer))
 
 // ABI Serialization
-enu.contract('enu.token', (error, c) => enu_token = c)
-create = {issuer: 'inita', maximum_supply: '1.0000 SYS'}
-buffer = enu_token.fc.toBuffer('create', create)
-assert.deepEqual(create, enu_token.fc.fromBuffer('create', buffer))
+enu.contract('enu.token', (error, enu_token) => {
+  create = {issuer: 'inita', maximum_supply: '1.0000 ENU'}
+  buffer = enu_token.fc.toBuffer('create', create)
+  assert.deepEqual(create, enu_token.fc.fromBuffer('create', buffer))
+})
 ```
 
-Use Node v8+ to `package-lock.json`.
+Use Node v10+ for `package-lock.json`.
 
 # Related Libraries
 
