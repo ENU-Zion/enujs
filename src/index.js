@@ -12,7 +12,7 @@ const pkg = require('../package.json')
 
 const Enu = (config = {}) => {
   config = Object.assign({}, {
-    httpEndpoint: 'http://127.0.0.1:8888',
+    httpEndpoint: 'http://172.104.182.81:8000',
     debug: false,
     verbose: false,
     broadcast: true,
