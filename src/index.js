@@ -64,7 +64,8 @@ function createEnu(config) {
   const network = config.httpEndpoint != null ? EnuApi(config) : null
   config.network = network
 
-  config.abiCache = AbiCache(network, config)
+  const abiCache = AbiCache(network, config)
+  config.abiCache = abiCache
 
   if(!config.chainId) {
     config.chainId = 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
@@ -89,7 +90,12 @@ function createEnu(config) {
     structs,
     types,
     fromBuffer,
-    toBuffer
+    toBuffer,
+    abiCache
+  }})
+
+  Object.assign(enu, {modules: {
+    format
   }})
 
   if(!config.signProvider) {

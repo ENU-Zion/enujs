@@ -26,12 +26,16 @@ describe('offline', () => {
     transaction_extensions: []
   }
 
-  const transactionHeaders = (expireInSeconds, callback) => {
-    callback(null/*error*/, headers)
-  }
 
   it('multi-signature', async function() {
+<<<<<<< HEAD
     const enu = Enu({
+=======
+    const transactionHeaders = (expireInSeconds, callback) => {
+      callback(null/*error*/, headers)
+    }
+    const eos = Eos({
+>>>>>>> upstream/master
       keyProvider: [
         ecc.seedPrivate('key1'),
         ecc.seedPrivate('key2')
@@ -69,11 +73,16 @@ describe('offline', () => {
     assert.equal(trx.transaction.signatures.length, 1, 'signature count')
   })
 
+<<<<<<< HEAD
   it('transactionHeaders callback', async function() {
     const enu = Enu({
+=======
+  it('transactionHeaders object', async function() {
+    const eos = Eos({
+>>>>>>> upstream/master
       keyProvider: wif,
       httpEndpoint: null,
-      transactionHeaders
+      transactionHeaders: headers
     })
 
     const memo = ''
@@ -92,6 +101,20 @@ describe('offline', () => {
 
     assert.equal(trx.transaction.signatures.length, 1, 'signature count')
   })
+
+  it('abi', async function() {
+    const eos = Eos({httpEndpoint: null})
+
+    const abiBuffer = fs.readFileSync(`docker/contracts/eosio.bios/eosio.bios.abi`)
+    const abiObject = JSON.parse(abiBuffer)
+
+    assert.deepEqual(abiObject, eos.fc.abiCache.abi('eosio.bios', abiBuffer).abi)
+    assert.deepEqual(abiObject, eos.fc.abiCache.abi('eosio.bios', abiObject).abi)
+
+    const bios = await eos.contract('eosio.bios')
+    assert(typeof bios.newaccount === 'function', 'unrecognized contract')
+  })
+
 })
 
 // some transactions that don't broadcast may require Api lookups
@@ -141,7 +164,11 @@ if(process.env['NODE_ENV'] === 'development') {
         await enu.setcode(account, 0, 0, wasm)
         await enu.setabi(account, JSON.parse(abi))
 
+<<<<<<< HEAD
         const code = await enu.getCode(account)
+=======
+        const code = await eos.getAbi(account)
+>>>>>>> upstream/master
 
         const diskAbi = JSON.parse(abi)
         delete diskAbi.____comment
@@ -371,13 +398,16 @@ if(process.env['NODE_ENV'] === 'development') {
       return enu.transfer('inita', 'initb', '1.0000 ENU', '', false)
     })
 
-    it('action to unknown contract', () => {
+    it('action to unknown contract', done => {
       const logger = { error: null }
+<<<<<<< HEAD
       return Enu({signProvider, logger}).contract('unknown432')
+=======
+      Eos({signProvider, logger}).contract('unknown432')
+>>>>>>> upstream/master
       .then(() => {throw 'expecting error'})
       .catch(error => {
-        assert(/unknown key/.test(error.toString()),
-          'expecting "unknown key" error action, instead got: ' + error)
+        done()
       })
     })
 
@@ -497,7 +527,18 @@ if(process.env['NODE_ENV'] === 'development') {
     })
   })
 
+<<<<<<< HEAD
   // ./enumivoc set contract currency build/contracts/currency/currency.wasm build/contracts/currency/currency.abi
+=======
+  it('Transaction ABI cache', async function() {
+    const eos = Eos()
+    assert.throws(() => eos.fc.abiCache.abi('eosio'), /not cached/)
+    const abi = await eos.fc.abiCache.abiAsync('eosio')
+    assert.deepEqual(abi, await eos.fc.abiCache.abiAsync('eosio', false/*force*/))
+    assert.deepEqual(abi, eos.fc.abiCache.abi('eosio'))
+  })
+
+>>>>>>> upstream/master
   it('Transaction ABI lookup', async function() {
     const enu = Enu()
     const tx = await enu.transaction(

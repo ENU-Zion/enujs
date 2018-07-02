@@ -264,6 +264,16 @@ Read-write API methods and documentation are generated from the enumivo
 [token](https://github.com/enumivo/enujs/blob/master/src/schema/enu_token.json) and
 [system](https://github.com/enumivo/enujs/blob/master/src/schema/enumivo_system.json).
 
+Assets amounts require zero padding.  For a better user-experience, if you know
+the correct precision you may use DecimalPad to add the padding.
+
+```js
+DecimalPad = Enu.modules.format.DecimalPad
+userInput = '10.2'
+precision = 4
+assert.equal('10.2000', DecimalPad(userInput, precision))
+```
+
 For more advanced signing, see `keyProvider` and `signProvider` in
 [index.test.js](https://github.com/enumivo/enujs/blob/master/src/index.test.js).
 
@@ -361,27 +371,72 @@ enu.transaction(['myaccount', 'myaccount2'], ({myaccount, myaccount2}) => {
 })
 ```
 
+#### Offline or cold-storage contract
+
+```js
+enu = Enu({httpEndpoint: null})
+
+abi = fs.readFileSync(`docker/contracts/enu.token/enu.token.abi`)
+enu.fc.abiCache.abi('myaccount', JSON.parse(abi))
+
+// Check that the ABI is available (print usage)
+enu.contract('myaccount').then(myaccount => myaccount.create())
+```
+#### Offline or cold-storage transaction
+
+```js
+// ONLINE
+
+// Prepare headers
+expireInSeconds = 60 * 60 // 1 hour
+
+enu = Enu(/* {httpEndpoint: 'https://..'} */)
+
+info = await enu.getInfo({})
+chainDate = new Date(info.head_block_time + 'Z')
+expiration = new Date(chainDate.getTime() + expireInSeconds * 1000)
+expiration = expiration.toISOString().split('.')[0]
+
+block = await enu.getBlock(info.last_irreversible_block_num)
+
+transactionHeaders = {
+  expiration,
+  ref_block_num: info.last_irreversible_block_num & 0xFFFF,
+  ref_block_prefix: block.ref_block_prefix
+}
+
+// OFFLINE (bring `transactionHeaders`)
+
+// All keys in keyProvider will sign.
+enu = Enu({httpEndpoint: null, chainId, keyProvider, transactionHeaders})
+
+transfer = await enu.transfer('inita', 'initb', '1.0000 SYS', '')
+transferTransaction = transfer.transaction
+
+// ONLINE (bring `transferTransaction`)
+
+enu = Enu(/* {httpEndpoint: 'https://..'} */)
+
+processedTransaction = await enu.pushTransaction(transferTransaction)
+```
+
 #### Custom Token
 
 ```js
-(async function() {
+// more on the contract / transaction syntax
 
-  // more on the contract / transaction syntax below
+await enu.transaction('myaccount', myaccount => {
 
-  await enu.transaction('myaccount', myaccount => {
+  // Create the initial token with its max supply
+  // const options = {authorization: 'myaccount'} // default
+  myaccount.create('myaccount', '10000000.000 TOK')//, options)
 
-    // Create the initial token with its max supply
-    // const options = {authorization: 'myaccount'} // default
-    myaccount.create('myaccount', '10000000.000 TOK')//, options)
+  // Issue some of the max supply for circulation into an arbitrary account
+  myaccount.issue('myaccount', '10000.000 TOK', 'issue')
+})
 
-    // Issue some of the max supply for circulation into an arbitrary account
-    myaccount.issue('myaccount', '10000.000 TOK', 'issue')
-  })
-
-  const balance = await enu.getCurrencyBalance('myaccount', 'myaccount', 'TOK')
-  console.log('Currency Balance', balance)
-
-})()
+const balance = await enu.getCurrencyBalance('myaccount', 'myaccount', 'TOK')
+console.log('Currency Balance', balance)
 ```
 
 ### Calling Actions
@@ -389,42 +444,38 @@ enu.transaction(['myaccount', 'myaccount2'], ({myaccount, myaccount2}) => {
 Other ways to use contracts and transactions.
 
 ```javascript
-(async function() {
+// if either transfer fails, both will fail (1 transaction, 2 messages)
+await enu.transaction(enu =>
+  {
+    enu.transfer('inita', 'initb', '1.0000 SYS', ''/*memo*/)
+    enu.transfer('inita', 'initc', '1.0000 SYS', ''/*memo*/)
+    // Returning a promise is optional (but handled as expected)
+  }
+  // [options],
+  // [callback]
+)
 
-  // if either transfer fails, both will fail (1 transaction, 2 messages)
-  await enu.transaction(enu =>
-    {
-      enu.transfer('inita', 'initb', '1.0000 ENU', ''/*memo*/)
-      enu.transfer('inita', 'initc', '1.0000 ENU', ''/*memo*/)
-      // Returning a promise is optional (but handled as expected)
-    }
-    // [options],
-    // [callback]
-  )
+// transaction on a single contract
+await enu.transaction('myaccount', myaccount => {
+  myaccount.transfer('myaccount', 'inita', '10.000 TOK@myaccount', '')
+})
 
-  // transaction on a single contract
-  await enu.transaction('myaccount', myaccount => {
-    myaccount.transfer('myaccount', 'inita', '10.000 TOK@myaccount', '')
-  })
+// mix contracts in the same transaction
+await enu.transaction(['myaccount', 'enu.token'], ({myaccount, enu_token}) => {
+  myaccount.transfer('inita', 'initb', '1.000 TOK@myaccount', '')
+  enumivo_token.transfer('inita', 'initb', '1.0000 SYS', '')
+})
 
-  // mix contracts in the same transaction
-  await enu.transaction(['myaccount', 'enu.token'], ({myaccount, enu_token}) => {
-    myaccount.transfer('inita', 'initb', '1.000 TOK@myaccount', '')
-    enu_token.transfer('inita', 'initb', '1.0000 ENU', '')
-  })
+// The contract method does not take an array so must be called once for
+// each contract that is needed.
+const myaccount = await enu.contract('myaccount')
+await myaccount.transfer('myaccount', 'inita', '1.000 TOK', '')
 
-  // The contract method does not take an array so must be called once for
-  // each contract that is needed.
-  const myaccount = await enu.contract('myaccount')
-  await myaccount.transfer('myaccount', 'inita', '1.000 TOK', '')
-
-  // a transaction to a contract instance can specify multiple actions
-  await myaccount.transaction(myaccountTr => {
-    myaccountTr.transfer('inita', 'initb', '1.000 TOK', '')
-    myaccountTr.transfer('initb', 'inita', '1.000 TOK', '')
-  })
-
-})()
+// a transaction to a contract instance can specify multiple actions
+await myaccount.transaction(myaccountTr => {
+  myaccountTr.transfer('inita', 'initb', '1.000 TOK', '')
+  myaccountTr.transfer('initb', 'inita', '1.000 TOK', '')
+})
 ```
 
 # Development

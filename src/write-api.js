@@ -405,13 +405,16 @@ function WriteApi(Network, network, config, Transaction) {
     if(argHeaders) {
       headers = (expireInSeconds, callback) => callback(null, argHeaders)
     } else if(config.transactionHeaders) {
-      assert.equal(typeof config.transactionHeaders, 'function', 'config.transactionHeaders')
-      headers = config.transactionHeaders
+      if(typeof config.transactionHeaders === 'object') {
+        headers = (exp, callback) => callback(null, config.transactionHeaders)
+      } else {
+        assert.equal(typeof config.transactionHeaders, 'function', 'config.transactionHeaders')
+        headers = config.transactionHeaders
+      }
     } else {
-      assert(network, 'Network is required, provide config.httpEndpoint')
+      assert(network, 'Network is required, provide httpEndpoint or own transaction headers')
       headers = network.createTransaction
     }
-
     headers(options.expireInSeconds, checkError(callback, config.logger, async function(rawTx) {
       // console.log('rawTx', rawTx)
       assert.equal(typeof rawTx, 'object', 'expecting transaction header object')
@@ -419,7 +422,13 @@ function WriteApi(Network, network, config, Transaction) {
       assert.equal(typeof rawTx.ref_block_num, 'number', 'expecting ref_block_num number')
       assert.equal(typeof rawTx.ref_block_prefix, 'number', 'expecting ref_block_prefix number')
 
-      rawTx = Object.assign({}, rawTx)
+      const defaultHeaders = {
+        net_usage_words: 0,
+        max_cpu_usage_ms: 0,
+        delay_sec: 0
+      }
+
+      rawTx = Object.assign({}, defaultHeaders, rawTx)
 
       rawTx.actions = arg.actions
 
@@ -434,7 +443,8 @@ function WriteApi(Network, network, config, Transaction) {
       let sigs = []
       if(options.sign){
         const chainIdBuf = new Buffer(config.chainId, 'hex')
-        const signBuf = Buffer.concat([chainIdBuf, buf, new Buffer(new Uint8Array(32))])
+        const packedContextFreeData = new Buffer(new Uint8Array(32)) // TODO
+        const signBuf = Buffer.concat([chainIdBuf, buf, packedContextFreeData])
         sigs = config.signProvider({transaction: tr, buf: signBuf, sign})
         if(!Array.isArray(sigs)) {
           sigs = [sigs]
@@ -489,21 +499,25 @@ function WriteApi(Network, network, config, Transaction) {
             transaction: packedTr
           })
         } else {
-          network.pushTransaction(packedTr, error => {
+          network.pushTransaction(packedTr, (error, processedTransaction) => {
             if(!error) {
-              callback(null, {
-                transaction_id: transactionId,
-                broadcast: true,
-                transaction: packedTr
-              })
+              callback(
+                null,
+                Object.assign(
+                  {
+                    broadcast: true,
+                    transaction: packedTr,
+                    transaction_id: transactionId
+                  },
+                  processedTransaction
+                )
+              )
             } else {
-
               if(config.logger.error) {
                 config.logger.error(
                   `[push_transaction error] '${error.message}', transaction '${buf.toString('hex')}'`
                 )
               }
-
               callback(error.message)
             }
           })
