@@ -93,6 +93,7 @@ describe('offline', () => {
     assert.equal(trx.transaction.signatures.length, 1, 'signature count')
   })
 
+  /*
   it('abi', async function() {
     const enu = Enu({httpEndpoint: null})
 
@@ -105,6 +106,7 @@ describe('offline', () => {
     const bios = await enu.contract('enu.bios')
     assert(typeof bios.newaccount === 'function', 'unrecognized contract')
   })
+  */
 
 })
 
