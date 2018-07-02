@@ -28,14 +28,10 @@ describe('offline', () => {
 
 
   it('multi-signature', async function() {
-<<<<<<< HEAD
-    const enu = Enu({
-=======
     const transactionHeaders = (expireInSeconds, callback) => {
       callback(null/*error*/, headers)
     }
-    const eos = Eos({
->>>>>>> upstream/master
+    const enu = Enu({
       keyProvider: [
         ecc.seedPrivate('key1'),
         ecc.seedPrivate('key2')
@@ -73,13 +69,8 @@ describe('offline', () => {
     assert.equal(trx.transaction.signatures.length, 1, 'signature count')
   })
 
-<<<<<<< HEAD
-  it('transactionHeaders callback', async function() {
-    const enu = Enu({
-=======
   it('transactionHeaders object', async function() {
-    const eos = Eos({
->>>>>>> upstream/master
+    const enu = Enu({
       keyProvider: wif,
       httpEndpoint: null,
       transactionHeaders: headers
@@ -103,15 +94,15 @@ describe('offline', () => {
   })
 
   it('abi', async function() {
-    const eos = Eos({httpEndpoint: null})
+    const enu = Enu({httpEndpoint: null})
 
-    const abiBuffer = fs.readFileSync(`docker/contracts/eosio.bios/eosio.bios.abi`)
+    const abiBuffer = fs.readFileSync(`docker/contracts/enu.bios/enu.bios.abi`)
     const abiObject = JSON.parse(abiBuffer)
 
-    assert.deepEqual(abiObject, eos.fc.abiCache.abi('eosio.bios', abiBuffer).abi)
-    assert.deepEqual(abiObject, eos.fc.abiCache.abi('eosio.bios', abiObject).abi)
+    assert.deepEqual(abiObject, enu.fc.abiCache.abi('enu.bios', abiBuffer).abi)
+    assert.deepEqual(abiObject, enu.fc.abiCache.abi('enu.bios', abiObject).abi)
 
-    const bios = await eos.contract('eosio.bios')
+    const bios = await enu.contract('enu.bios')
     assert(typeof bios.newaccount === 'function', 'unrecognized contract')
   })
 
@@ -164,11 +155,7 @@ if(process.env['NODE_ENV'] === 'development') {
         await enu.setcode(account, 0, 0, wasm)
         await enu.setabi(account, JSON.parse(abi))
 
-<<<<<<< HEAD
-        const code = await enu.getCode(account)
-=======
-        const code = await eos.getAbi(account)
->>>>>>> upstream/master
+        const code = await enu.getAbi(account)
 
         const diskAbi = JSON.parse(abi)
         delete diskAbi.____comment
@@ -400,11 +387,7 @@ if(process.env['NODE_ENV'] === 'development') {
 
     it('action to unknown contract', done => {
       const logger = { error: null }
-<<<<<<< HEAD
-      return Enu({signProvider, logger}).contract('unknown432')
-=======
-      Eos({signProvider, logger}).contract('unknown432')
->>>>>>> upstream/master
+      Enu({signProvider, logger}).contract('unknown432')
       .then(() => {throw 'expecting error'})
       .catch(error => {
         done()
@@ -527,18 +510,14 @@ if(process.env['NODE_ENV'] === 'development') {
     })
   })
 
-<<<<<<< HEAD
-  // ./enumivoc set contract currency build/contracts/currency/currency.wasm build/contracts/currency/currency.abi
-=======
   it('Transaction ABI cache', async function() {
-    const eos = Eos()
-    assert.throws(() => eos.fc.abiCache.abi('eosio'), /not cached/)
-    const abi = await eos.fc.abiCache.abiAsync('eosio')
-    assert.deepEqual(abi, await eos.fc.abiCache.abiAsync('eosio', false/*force*/))
-    assert.deepEqual(abi, eos.fc.abiCache.abi('eosio'))
+    const enu = Enu()
+    assert.throws(() => enu.fc.abiCache.abi('enumivo'), /not cached/)
+    const abi = await enu.fc.abiCache.abiAsync('enumivo')
+    assert.deepEqual(abi, await enu.fc.abiCache.abiAsync('enumivo', false/*force*/))
+    assert.deepEqual(abi, enu.fc.abiCache.abi('enumivo'))
   })
 
->>>>>>> upstream/master
   it('Transaction ABI lookup', async function() {
     const enu = Enu()
     const tx = await enu.transaction(
