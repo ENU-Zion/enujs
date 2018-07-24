@@ -42,11 +42,7 @@ module.exports = Enu
 Object.assign(
   Enu,
   {
-<<<<<<< HEAD
-    version: pkg.version,
-=======
     version: '16.0.0',
->>>>>>> upstream/master
     modules: {
       format,
       api: EnuApi,
@@ -72,14 +68,8 @@ Object.assign(
   }
 )
 
-<<<<<<< HEAD
-
 function createEnu(config) {
   const network = config.httpEndpoint != null ? EnuApi(config) : null
-=======
-function createEos(config) {
-  const network = config.httpEndpoint != null ? EosApi(config) : null
->>>>>>> upstream/master
   config.network = network
 
   const abiCache = AbiCache(network, config)
@@ -103,20 +93,7 @@ function createEos(config) {
   const {structs, types, fromBuffer, toBuffer} = Structs(config)
   const enu = mergeWriteFunctions(config, EnuApi, structs)
 
-<<<<<<< HEAD
-  Object.assign(enu, {fc: {
-    structs,
-    types,
-    fromBuffer,
-    toBuffer,
-    abiCache
-  }})
-
-  Object.assign(enu, {modules: {
-    format
-  }})
-=======
-  Object.assign(eos, {
+  Object.assign(enu, {
     config: safeConfig(config),
     fc: {
       structs,
@@ -129,7 +106,6 @@ function createEos(config) {
       format
     }
   })
->>>>>>> upstream/master
 
   if(!config.signProvider) {
     config.signProvider = defaultSignProvider(enu, config)
