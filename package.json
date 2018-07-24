@@ -1,6 +1,6 @@
 {
   "name": "enujs",
-  "version": "15.0.3",
+  "version": "16.0.0",
   "description": "General purpose library for the Enumivo blockchain.",
   "main": "lib/index.js",
   "files": [
@@ -55,8 +55,8 @@
     "babel-runtime": "^6.26.0",
     "binaryen": "^37.0.0",
     "create-hash": "^1.1.3",
-    "enujs-api": "6.3.0",
-    "enujs-ecc": "4.0.1",
+    "enujs-api": "7.0.0",
+    "enujs-ecc": "4.0.2",
     "fcbuffer": "2.2.0"
   },
   "babel": {

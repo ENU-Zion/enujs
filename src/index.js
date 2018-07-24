@@ -11,19 +11,28 @@ const schema = require('./schema')
 const pkg = require('../package.json')
 
 const Enu = (config = {}) => {
-  config = Object.assign({}, {
-    httpEndpoint: 'http://172.104.182.81:8000',
+  const configDefaults = {
+    httpEndpoint: 'https://api.enumivo.org',
     debug: false,
     verbose: false,
     broadcast: true,
+    logger: {
+      log: (...args) => config.verbose ? console.log(...args) : null,
+      error: console.error
+    },
     sign: true
-  }, config)
-
-  const defaultLogger = {
-    log: config.verbose ? console.log : null,
-    error: console.error
   }
-  config.logger = Object.assign({}, defaultLogger, config.logger)
+
+  function applyDefaults(target, defaults) {
+    Object.keys(defaults).forEach(key => {
+      if(target[key] === undefined) {
+        target[key] = defaults[key]
+      }
+    })
+  }
+
+  applyDefaults(config, configDefaults)
+  applyDefaults(config.logger, configDefaults.logger)
 
   return createEnu(config)
 }
@@ -33,7 +42,11 @@ module.exports = Enu
 Object.assign(
   Enu,
   {
+<<<<<<< HEAD
     version: pkg.version,
+=======
+    version: '16.0.0',
+>>>>>>> upstream/master
     modules: {
       format,
       api: EnuApi,
@@ -59,13 +72,17 @@ Object.assign(
   }
 )
 
+<<<<<<< HEAD
 
 function createEnu(config) {
   const network = config.httpEndpoint != null ? EnuApi(config) : null
+=======
+function createEos(config) {
+  const network = config.httpEndpoint != null ? EosApi(config) : null
+>>>>>>> upstream/master
   config.network = network
 
   const abiCache = AbiCache(network, config)
-  config.abiCache = abiCache
 
   if(!config.chainId) {
     config.chainId = 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
@@ -86,6 +103,7 @@ function createEnu(config) {
   const {structs, types, fromBuffer, toBuffer} = Structs(config)
   const enu = mergeWriteFunctions(config, EnuApi, structs)
 
+<<<<<<< HEAD
   Object.assign(enu, {fc: {
     structs,
     types,
@@ -97,12 +115,59 @@ function createEnu(config) {
   Object.assign(enu, {modules: {
     format
   }})
+=======
+  Object.assign(eos, {
+    config: safeConfig(config),
+    fc: {
+      structs,
+      types,
+      fromBuffer,
+      toBuffer,
+      abiCache
+    },
+    modules: {
+      format
+    }
+  })
+>>>>>>> upstream/master
 
   if(!config.signProvider) {
     config.signProvider = defaultSignProvider(enu, config)
   }
 
   return enu
+}
+
+/**
+  Set each property as read-only, read-write, no-access.  This is shallow
+  in that it applies only to the root object and does not limit access
+  to properties under a given object.
+*/
+function safeConfig(config) {
+  // access control is shallow references only
+  const readOnly = new Set(['httpEndpoint', 'abiCache'])
+  const readWrite = new Set(['verbose', 'debug', 'broadcast', 'logger', 'sign'])
+  const protectedConfig = {}
+
+  Object.keys(config).forEach(key => {
+    Object.defineProperty(protectedConfig, key, {
+      set: function(value) {
+        if(readWrite.has(key)) {
+          config[key] = value
+          return
+        }
+        throw new Error('Access denied')
+      },
+
+      get: function() {
+        if(readOnly.has(key) || readWrite.has(key)) {
+          return config[key]
+        }
+        throw new Error('Access denied')
+      }
+    })
+  })
+  return protectedConfig
 }
 
 /**
