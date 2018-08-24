@@ -15,15 +15,10 @@ function AbiCache(network, config) {
   const cache = {}
 
   /**
-<<<<<<< HEAD
-    @arg {boolean} force false when ABI is immutable.  When force is true, API
-    user is still free to cache the contract object returned by enujs.
-=======
     Asynchronously fetch and cache an ABI from the blockchain.
 
     @arg {string} account - blockchain account with deployed contract
     @arg {boolean} [force = true] false when ABI is immutable.
->>>>>>> upstream/master
   */
   function abiAsync(account, force = true) {
     assert.equal(typeof account, 'string', 'account string required')

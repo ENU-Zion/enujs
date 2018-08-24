@@ -2,6 +2,54 @@
 
 General purpose library for Enumivo blockchains.
 
+### Versions
+
+| [enumivo/enujs](/enumivo/enujs) | [Npm](https://www.npmjs.com/package/enujs) | [enumivo/enumivo](https://github.com/enumivo/enumivo) | 
+| --- | --- | --- | --- |
+| tags: 16.0.0 - 16.0.7 | `npm install enujs` | tags: v1.1.n - v1.2.1 | 
+
+Prior [version](./docs/prior_versions.md) matrix.
+
+### Usage
+
+* Install with: `npm install enujs`
+* Html script tag, see [releases](https://github.com/enumivo/enujs/releases) for the correct **version** and its matching script **integrity** hash.
+
+```html
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/enujs@16.0.7/lib/enu.min.js"
+    crossorigin="anonymous"></script>
+
+  <script>
+  /** Transactions are only valid on the selected chain. */
+  chain = {
+    main: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // main network
+    jungle: '038f4b0fc8ff18a4f0842a8f0564611f6e96e8535901dd45e43ac8691a1c4dca', // jungle testnet
+    sys: 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f' // local developer
+  }
+
+  enu = Enu({
+    keyProvider: '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',// private key
+    httpEndpoint: 'http://127.0.0.1:8888',
+    chainId: chain.sys,
+  });
+
+  /**
+    Sign and broadcast a transaction.
+
+    @example updateProducerVote('myaccount', 'proxyaccount', ['respectedbp'])
+  */
+  async function updateProducerVote(voter, proxy = '', producers = []) {
+    return enu.voteproducer(voter, proxy, producers)
+  }
+
+  </script>
+</head>
+</html>
+```
+
 ### Usage
 
 Ways to instantiate enujs.
@@ -48,14 +96,14 @@ PARAMETERS
 }
 ```
 
-Start a enunoded process.  The docker in this repository provides a setup
-the supports the examples in this README.
+Start a enunode process.  The docker in this repository provides a setup
+that supports the examples in this README.
 
 ```bash
 cd ./docker && ./up.sh
 ```
 
-All functions read only or transactional follow this pattern for parameters.
+All blockchain functions (read and write) follow this pattern:
 
 ```js
 // If the last argument is a function it is treated as a callback
@@ -97,7 +145,7 @@ config = {
 enu = Enu(config)
 ```
 
-* **chainId** `hex` - Unique ID for the blockchain you're connecting too.  This
+* **chainId** `hex` - Unique ID for the blockchain you're connecting to.  This
   is required for valid transaction signing.  The chainId is provided via the
   [get_info](http://ayeaye.cypherglass.com:8888/v1/chain/get_info) API call.
 
@@ -123,7 +171,7 @@ enu = Enu(config)
   Set this value to **null** for a cold-storage (no network) configuration.
 
 * **expireInSeconds** `number` - number of seconds before the transaction
-  will expire.  The time is based on the enunoded's clock.  An unexpired
+  will expire.  The time is based on the enunode's clock.  An unexpired
   transaction that may have had an error is a liability until the expiration
   is reached, this time should be brief.
 
@@ -221,13 +269,13 @@ enu.transfer('alice', 'bob', '1.0000 ENU', '', options)
 
 The transaction function accepts the standard blockchain transaction.
 
-Required transaction header fields will be added unless your signing without a
+Required transaction header fields will be added unless you are signing without a
 network connection (httpEndpoint == null). In that case provide you own headers:
 
 ```js
 // only needed in cold-storage or for offline transactions
 const headers = {
-  expiration: '2018-06-14T18:16:10',
+  expiration: '2018-06-14T18:16:10'
   ref_block_num: 1,
   ref_block_prefix: 452435776
 }
@@ -290,7 +338,7 @@ enu.transfer('inita', 'initb', '1.4000 ENU', '', false)
 
 Read-write API methods and documentation are generated from the enumivo
 [token](https://github.com/enumivo/enujs/blob/master/src/schema/enu_token.json) and
-[system](https://github.com/enumivo/enujs/blob/master/src/schema/enumivo_system.json).
+[system](https://github.com/enumivo/enujs/blob/master/src/schema/enu_system.json).
 
 Assets amounts require zero padding.  For a better user-experience, if you know
 the correct precision you may use DecimalPad to add the padding.
@@ -313,8 +361,8 @@ objects to `enu.transaction`..
 
 For example:
 * permission `inita` defaults `inita@active`
-* authority `'ENU6MRy..'` expands `{threshold: 1, keys: [key: 'ENU6MRy..', weight: 1]}`
-* authority `inita` expands `{{threshold: 1, accounts: [..actor: 'inita', permission: 'active', weight: 1]}}`
+* authority `'ENU6MRy..'` expands `{threshold: 1, keys: [{key: 'ENU6MRy..', weight: 1}]}`
+* authority `inita` expands `{threshold: 1, accounts: [{permission: {actor: 'inita', permission: 'active'}, weight: 1}]}`
 
 ### New Account
 
@@ -559,7 +607,7 @@ var {format, api, ecc, json, Fcbuffer} = Enu.modules
   * Asset string formatting
 
 * enujs-api [[Github](https://github.com/enumivo/enujs-api), [NPM](https://www.npmjs.org/package/enujs-api)]
-  * Remote API to an ENU blockchain node (enunode)
+  * Remote API to an Enumivo blockchain node (enunode)
   * Use this library directly if you need read-only access to the blockchain
     (don't need to sign transactions).
 
@@ -579,28 +627,6 @@ var {format, api, ecc, json, Fcbuffer} = Enu.modules
   * Binary serialization used by the blockchain
   * Clients sign the binary form of the transaction
   * Allows client to know what it is signing
-
-
-# Browser
-
-```bash
-git clone https://github.com/enumivo/enujs.git
-cd enujs
-npm install
-npm run build_browser
-# builds: ./dist/enu.js load with ./dist/index.html
-
-npm run build_browser_test
-# builds: ./dist/test.js run with ./dist/test.html
-```
-
-```html
-<script src="enu.js"></script>
-<script>
-var enu = Enu()
-//...
-</script>
-```
 
 # Environment
 

@@ -8,7 +8,6 @@ const AbiCache = require('./abi-cache')
 const writeApiGen = require('./write-api')
 const format = require('./format')
 const schema = require('./schema')
-const pkg = require('../package.json')
 
 const token = require('./schema/enu.token.abi.json')
 const system = require('./schema/enu.system.abi.json')
@@ -298,8 +297,8 @@ const defaultSignProvider = (enu, config) => async function({
 function checkChainId(network, chainId, logger) {
   network.getInfo({}).then(info => {
     if(info.chain_id !== chainId) {
-      if(logger.error) {
-        logger.error(
+      if(logger.log) {
+        logger.log(
           'chainId mismatch, signatures will not match transaction authority. ' +
           `expected ${chainId} !== actual ${info.chain_id}`
         )
@@ -307,7 +306,7 @@ function checkChainId(network, chainId, logger) {
     }
   }).catch(error => {
     if(logger.error) {
-      logger.error(error)
+      logger.error('Warning, unable to validate chainId: ' + error.message)
     }
   })
 }
