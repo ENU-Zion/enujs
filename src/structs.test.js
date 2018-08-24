@@ -100,7 +100,7 @@ describe('shorthand', () => {
 
 })
 
-if(process.env['NODE_ENV'] === 'development') {
+describe('Enumivo Abi', () => {
 
   function checkContract(name) {
     it(`${name} contract parses`, (done) => {
