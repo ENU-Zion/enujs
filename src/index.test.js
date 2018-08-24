@@ -627,11 +627,11 @@ it('Transaction ABI lookup', async function() {
 })
 
 const randomName = () => {
-  const name = String(Math.round(Math.random() * 1000000000)).replace(/[0,6-9]/g, '')
-  return 'a' + name + '111222333444'.substring(0, 11 - name.length) // always 12 in length
+  const name = String(Math.round(Math.random() * 1000000000)).replace(/[0,6-9]/g, '');
+  return 'a' + name + '111222333444'.substring(0, 11 - name.length); // always 12 in length
 }
 
 const randomAsset = () => {
-  const name = ecc.sha256(String(Math.random())).toUpperCase().replace(/[^A-Z]/g, '').substring(0, 7)
-  return name
+  const name = ecc.sha256(String(Math.random())).toUpperCase().replace(/[^A-Z]/g, '').substring(0, 7);
+  return name;
 }
