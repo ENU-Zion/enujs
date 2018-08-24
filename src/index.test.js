@@ -631,5 +631,7 @@ const randomName = () => {
   return 'a' + name + '111222333444'.substring(0, 11 - name.length) // always 12 in length
 }
 
-const randomAsset = () =>
-  ecc.sha256(String(Math.random())).toUpperCase().replace(/[^A-Z]/g, '').substring(0, 7)
+const randomAsset = () => {
+  const name = ecc.sha256(String(Math.random())).toUpperCase().replace(/[^A-Z]/g, '').substring(0, 7)
+  return name
+}
