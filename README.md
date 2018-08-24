@@ -438,7 +438,7 @@ transactionHeaders = {
 // All keys in keyProvider will sign.
 enu = Enu({httpEndpoint: null, chainId, keyProvider, transactionHeaders})
 
-transfer = await enu.transfer('inita', 'initb', '1.0000 SYS', '')
+transfer = await enu.transfer('inita', 'initb', '1.0000 ENU', '')
 transferTransaction = transfer.transaction
 
 // ONLINE (bring `transferTransaction`)
@@ -475,8 +475,8 @@ Other ways to use contracts and transactions.
 // if either transfer fails, both will fail (1 transaction, 2 messages)
 await enu.transaction(enu =>
   {
-    enu.transfer('inita', 'initb', '1.0000 SYS', ''/*memo*/)
-    enu.transfer('inita', 'initc', '1.0000 SYS', ''/*memo*/)
+    enu.transfer('inita', 'initb', '1.0000 ENU', ''/*memo*/)
+    enu.transfer('inita', 'initc', '1.0000 ENU', ''/*memo*/)
     // Returning a promise is optional (but handled as expected)
   }
   // [options],
@@ -491,7 +491,7 @@ await enu.transaction('myaccount', myaccount => {
 // mix contracts in the same transaction
 await enu.transaction(['myaccount', 'enu.token'], ({myaccount, enu_token}) => {
   myaccount.transfer('inita', 'initb', '1.000 PHI', '')
-  enu_token.transfer('inita', 'initb', '1.0000 SYS', '')
+  enu_token.transfer('inita', 'initb', '1.0000 ENU', '')
 })
 
 // The contract method does not take an array so must be called once for

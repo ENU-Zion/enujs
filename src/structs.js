@@ -267,7 +267,7 @@ const SymbolCode = validation => {
 
     toObject (value) {
       if (validation.defaults && value == null) {
-        return 'SYS'
+        return 'ENU'
       }
       return parseAsset(value).symbol
     }
