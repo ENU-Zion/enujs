@@ -15,7 +15,7 @@ const enumivo_null = require('./schema/enumivo.null.abi.json')
 
 const Enu = (config = {}) => {
   const configDefaults = {
-    httpEndpoint: 'https://api.enumivo.org',
+    httpEndpoint: 'https://api.enumivo.com',
     debug: false,
     verbose: false,
     broadcast: true,
