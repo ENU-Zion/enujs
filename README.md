@@ -2,14 +2,6 @@
 
 General purpose library for Enumivo blockchains.
 
-### Versions
-
-| [enumivo/enujs](/enumivo/enujs) | [Npm](https://www.npmjs.com/package/enujs) | [enumivo/enumivo](https://github.com/enumivo/enumivo) | 
-| --- | --- | --- | --- |
-| tags: 16.0.0 - 16.0.7 | `npm install enujs` | tags: v1.1.n - v1.2.1 | 
-
-Prior [version](./docs/prior_versions.md) matrix.
-
 ### Usage
 
 * Install with: `npm install enujs`
