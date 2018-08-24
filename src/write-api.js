@@ -104,7 +104,7 @@ function WriteApi(Network, network, config, Transaction) {
 
       const abiPromises = []
 
-      // Eos contract operations are cached (efficient and offline transactions)
+      // Enu contract operations are cached (efficient and offline transactions)
       const cachedCode = new Set(['enumivo', 'enu.token', 'enumivo.null'])
       accounts.forEach(account => {
         if(!cachedCode.has(account)) {

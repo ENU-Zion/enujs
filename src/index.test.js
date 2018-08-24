@@ -47,7 +47,7 @@ describe('offline', () => {
 
   describe('custom transactions', function () {
     const nonce = {
-      account: 'enu.null',
+      account: 'enumivo.null',
       name: 'nonce',
       data: '010f'
     }
@@ -72,7 +72,7 @@ describe('offline', () => {
     })
 
     it('nonce', async function() {
-      const trx = await eos.transaction({
+      const trx = await enu.transaction({
         actions: [ Object.assign({}, nonce, {authorization}) ],
       })
     })

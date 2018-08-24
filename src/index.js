@@ -77,9 +77,9 @@ function createEnu(config) {
 
   const abis = []
   const abiCache = AbiCache(network, config)
-  abis.push(abiCache.abi('eosio.null', eosio_null))
-  abis.push(abiCache.abi('eosio.token', token))
-  abis.push(abiCache.abi('eosio', system))
+  abis.push(abiCache.abi('enumivo.null', enumivo_null))
+  abis.push(abiCache.abi('enu.token', token))
+  abis.push(abiCache.abi('enumivo', system))
 
   if(!config.chainId) {
     config.chainId = 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
@@ -108,7 +108,7 @@ function createEnu(config) {
       toBuffer,
       abiCache
     },
-    // Repeat of static Eos.modules, help apps that use dependency injection
+    // Repeat of static Enu.modules, help apps that use dependency injection
     modules: {
       format
     }
@@ -167,7 +167,7 @@ function mergeWriteFunctions(config, EnuApi, structs, abis) {
 
   const merge = Object.assign({}, network)
 
-  const writeApi = writeApiGen(EosApi, network, structs, config, abis)
+  const writeApi = writeApiGen(EnuApi, network, structs, config, abis)
   throwOnDuplicate(merge, writeApi, 'Conflicting methods in EnuApi and Transaction Api')
   Object.assign(merge, writeApi)
 

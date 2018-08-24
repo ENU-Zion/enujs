@@ -74,7 +74,7 @@ enu.getInfo((error, result) => { console.log(error, result) })
 
 ### API Documentation
 
-Chain and history API functions are available after creating the `eos` object.
+Chain and history API functions are available after creating the `enu` object.
 
 * [API](https://github.com/enumivo/enujs-api/blob/master/docs/api.md#enu--object)
 
@@ -115,9 +115,9 @@ enu = Enu(config)
 
 * **keyPrefix** `[string='ENU']` - Change the public key prefix.
 
-* **httpEndpoint** `string` - http or https location of a nodeosd server
-  providing a chain API.  When using eosjs from a browser remember to configure
-  the same origin policy in nodeosd or proxy server.  For testing, nodeosd
+* **httpEndpoint** `string` - http or https location of a enunode server
+  providing a chain API.  When using enujs from a browser remember to configure
+  the same origin policy in enunode or proxy server.  For testing, enunode
   configuration `access-control-allow-origin = *` could be used.
 
   Set this value to **null** for a cold-storage (no network) configuration.
@@ -159,7 +159,7 @@ enu = Enu(config)
 
   For example, redirect error logs: `config.logger = {error: (...args) => ..}`
 
-* **authorization** - replace the default eosjs authorization on actions.  An
+* **authorization** - replace the default enujs authorization on actions.  An
   authorization provided here may still be over-written by specifying an
   authorization for each individual action.
 
@@ -173,7 +173,7 @@ enu = Enu(config)
 
 Options may be provided after parameters.
 
-NOTE: `authorization` is for individual actions, it does not belong in `Eos(config)`.
+NOTE: `authorization` is for individual actions, it does not belong in `Enu(config)`.
 
 ```js
 options = {
@@ -210,11 +210,11 @@ enu.transfer('alice', 'bob', '1.0000 ENU', '', options)
   transaction.
 
   ```js
-  await eos.anyAction('args', {keyProvider})
+  await enu.anyAction('args', {keyProvider})
   ```
 
   ```js
-  await eos.transaction(tr => { tr.anyAction() }, {keyProvider})
+  await enu.transaction(tr => { tr.anyAction() }, {keyProvider})
   ```
 
 ### Transaction

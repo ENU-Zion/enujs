@@ -48,7 +48,7 @@ describe('shorthand', () => {
 
   it('public_key', () => {
     const enu = Enu({keyPrefix: 'PUB'})
-    const {structs, types} = eos.fc
+    const {structs, types} = enu.fc
     const PublicKeyType = types.public_key()
     const pubkey = 'PUB6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
     // 02c0ded2bc1f1305fb0faac5e6c03ee3a1924234985427b6167ca569d13df435cf
@@ -63,8 +63,8 @@ describe('shorthand', () => {
   })
 
   it('symbol_code', () => {
-    const eos = Eos({defaults: true})
-    const {types} = eos.fc
+    const enu = Enu({defaults: true})
+    const {types} = enu.fc
     const SymbolCode = types.symbol_code()
     assertSerializer(SymbolCode, SymbolCode.toObject())
   })
