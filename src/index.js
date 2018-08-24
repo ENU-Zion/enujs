@@ -10,6 +10,10 @@ const format = require('./format')
 const schema = require('./schema')
 const pkg = require('../package.json')
 
+const token = require('./schema/enu.token.abi.json')
+const system = require('./schema/enu.system.abi.json')
+const enumivo_null = require('./schema/enumivo.null.abi.json')
+
 const Enu = (config = {}) => {
   const configDefaults = {
     httpEndpoint: 'https://api.enumivo.org',
@@ -18,7 +22,7 @@ const Enu = (config = {}) => {
     broadcast: true,
     logger: {
       log: (...args) => config.verbose ? console.log(...args) : null,
-      error: console.error
+      error: (...args) => config.verbose ? console.error(...args) : null
     },
     sign: true
   }
@@ -33,7 +37,6 @@ const Enu = (config = {}) => {
 
   applyDefaults(config, configDefaults)
   applyDefaults(config.logger, configDefaults.logger)
-
   return createEnu(config)
 }
 
@@ -72,7 +75,11 @@ function createEnu(config) {
   const network = config.httpEndpoint != null ? EnuApi(config) : null
   config.network = network
 
+  const abis = []
   const abiCache = AbiCache(network, config)
+  abis.push(abiCache.abi('eosio.null', eosio_null))
+  abis.push(abiCache.abi('eosio.token', token))
+  abis.push(abiCache.abi('eosio', system))
 
   if(!config.chainId) {
     config.chainId = 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
@@ -89,9 +96,8 @@ function createEnu(config) {
     }
     assert.equal(typeof config.mockTransactions, 'function', 'config.mockTransactions')
   }
-
   const {structs, types, fromBuffer, toBuffer} = Structs(config)
-  const enu = mergeWriteFunctions(config, EnuApi, structs)
+  const enu = mergeWriteFunctions(config, EnuApi, structs, abis)
 
   Object.assign(enu, {
     config: safeConfig(config),
@@ -102,6 +108,7 @@ function createEnu(config) {
       toBuffer,
       abiCache
     },
+    // Repeat of static Eos.modules, help apps that use dependency injection
     modules: {
       format
     }
@@ -155,12 +162,12 @@ function safeConfig(config) {
   @return {object} - read and write method calls (create and sign transactions)
   @throw {TypeError} if a funciton name conflicts
 */
-function mergeWriteFunctions(config, EnuApi, structs) {
+function mergeWriteFunctions(config, EnuApi, structs, abis) {
   const {network} = config
 
   const merge = Object.assign({}, network)
 
-  const writeApi = writeApiGen(EnuApi, network, structs, config, schema)
+  const writeApi = writeApiGen(EosApi, network, structs, config, abis)
   throwOnDuplicate(merge, writeApi, 'Conflicting methods in EnuApi and Transaction Api')
   Object.assign(merge, writeApi)
 
@@ -183,11 +190,14 @@ function throwOnDuplicate(o1, o2, msg) {
   If only one key is available, the blockchain API calls are skipped and that
   key is used to sign the transaction.
 */
-const defaultSignProvider = (enu, config) => async function({sign, buf, transaction}) {
-  const {keyProvider} = config
+const defaultSignProvider = (enu, config) => async function({
+  sign, buf, transaction, optionsKeyProvider
+}) {
+  // optionsKeyProvider is a per-action key: await enu.someAction('user2' .., {keyProvider: privateKey2})
+  const keyProvider = optionsKeyProvider ? optionsKeyProvider : config.keyProvider
 
   if(!keyProvider) {
-    throw new TypeError('This transaction requires a config.keyProvider for signing')
+    throw new TypeError('This transaction requires a keyProvider for signing')
   }
 
   let keys = keyProvider

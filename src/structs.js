@@ -3,7 +3,7 @@ const Fcbuffer = require('fcbuffer')
 const ByteBuffer = require('bytebuffer')
 const assert = require('assert')
 
-const json = {schema: require('./schema')}
+const schema = require('./schema')
 
 const {
   isName, encodeName, decodeName,
@@ -14,26 +14,25 @@ const {
 /** Configures Fcbuffer for ENU specific structs and types. */
 module.exports = (config = {}, extendedSchema) => {
   const structLookup = (lookupName, account) => {
-    const cachedCode = new Set(['enumivo', 'enu.token', 'enu.null'])
-    if(cachedCode.has(account)) {
-      return structs[lookupName]
-    }
-    const abi = config.abiCache.abi(account)
-    const struct = abi.structs[lookupName]
-    if(struct != null) {
-      return struct
-    }
-    // TODO: move up (before `const struct = abi.structs[lookupName]`)
-    for(const action of abi.abi.actions) {
-      const {name, type} = action
-      if(name === lookupName) {
-        const struct = abi.structs[type]
+    const cache = config.abiCache.abi(account)
+
+    // Lookup by ABI action "name"
+    for(const action of cache.abi.actions) {
+      if(action.name === lookupName) {
+        const struct = cache.structs[action.type]
         if(struct != null) {
           return struct
         }
       }
     }
-    throw new Error(`Missing ABI struct or action: ${lookupName}`)
+
+    // Lookup struct by "type"
+    const struct = cache.structs[lookupName]
+    if(struct != null) {
+      return struct
+    }
+
+    throw new Error(`Missing ABI action: ${lookupName}`)
   }
 
   // If enunode does not have an ABI setup for a certain action.type, it will throw
@@ -43,7 +42,7 @@ module.exports = (config = {}, extendedSchema) => {
     config.forceActionDataHex : true
 
   const override = Object.assign({},
-    authorityOverride,
+    authorityOverride(config),
     abiOverride(structLookup),
     wasmCodeOverride(config),
     actionDataOverride(structLookup, forceActionDataHex),
@@ -55,6 +54,7 @@ module.exports = (config = {}, extendedSchema) => {
     public_key: () => [variant(PublicKeyEcc)],
 
     symbol: () => [Symbol],
+    symbol_code: () => [SymbolCode],
     extended_symbol: () => [ExtendedSymbol],
 
     asset: () => [Asset], // After Symbol: amount, precision, symbol, contract
@@ -73,9 +73,9 @@ module.exports = (config = {}, extendedSchema) => {
   config.sort['authority.accounts'] = true
   config.sort['authority.keys'] = true
 
-  const schema = Object.assign({}, json.schema, extendedSchema)
+  const fullSchema = Object.assign({}, schema, extendedSchema)
+  const {structs, types, errors, fromBuffer, toBuffer} = Fcbuffer(fullSchema, config)
 
-  const {structs, types, errors, fromBuffer, toBuffer} = Fcbuffer(schema, config)
   if(errors.length !== 0) {
     throw new Error(JSON.stringify(errors, null, 4))
   }
@@ -157,14 +157,14 @@ const PublicKeyEcc = (validation) => {
       const bcopy = b.copy(b.offset, b.offset + 33)
       b.skip(33)
       const pubbuf = Buffer.from(bcopy.toBinary(), 'binary')
-      return PublicKey.fromBuffer(pubbuf).toString()
+      return PublicKey.fromBuffer(pubbuf).toString(validation.keyPrefix)
     },
 
     appendByteBuffer (b, value) {
       // if(validation.debug) {
       //   console.error(`${value}`, 'PublicKeyType.appendByteBuffer')
       // }
-      const buf = PublicKey.fromStringOrThrow(value).toBuffer()
+      const buf = PublicKey.fromStringOrThrow(value, validation.keyPrefix).toBuffer()
       b.append(buf.toString('binary'), 'binary')
     },
 
@@ -174,7 +174,8 @@ const PublicKeyEcc = (validation) => {
 
     toObject (value) {
       if (validation.defaults && value == null) {
-        return 'ENU6MRy..'
+        const keyPrefix = validation.keyPrefix ? validation.keyPrefix : 'ENU'
+        return keyPrefix + '6MRy..'
       }
       return value
     }
@@ -228,6 +229,46 @@ const Symbol = validation => {
         return 'ENU'
       }
       // symbol only (without precision prefix)
+      return parseAsset(value).symbol
+    }
+  }
+}
+
+/** Symbol type without the precision */
+const SymbolCode = validation => {
+  return {
+    fromByteBuffer (b) {
+      const bcopy = b.copy(b.offset, b.offset + 8)
+      b.skip(8)
+
+      const bin = bcopy.toBinary()
+
+      let symbol = ''
+      for(const code of bin)  {
+        if(code == '\0') {
+          break
+        }
+        symbol += code
+      }
+      return `${symbol}`
+    },
+
+    appendByteBuffer (b, value) {
+      const {symbol} = parseAsset(value)
+      const pad = '\0'.repeat(8 - symbol.length)
+      b.append(symbol + pad)
+    },
+
+    fromObject (value) {
+      assert(value != null, `Symbol is required: ` + value)
+      const {symbol} = parseAsset(value)
+      return symbol
+    },
+
+    toObject (value) {
+      if (validation.defaults && value == null) {
+        return 'SYS'
+      }
       return parseAsset(value).symbol
     }
   }
@@ -426,10 +467,10 @@ const SignatureType = (validation, baseTypes) => {
   }
 }
 
-const authorityOverride = ({
+const authorityOverride = config => ({
   /** shorthand `ENU6MRyAj..` */
   'authority.fromObject': (value) => {
-    if(PublicKey.fromString(value)) {
+    if(PublicKey.fromString(value, config.keyPrefix)) {
       return {
         threshold: 1,
         keys: [{key: value, weight: 1}]
@@ -452,18 +493,30 @@ const authorityOverride = ({
 })
 
 const abiOverride = structLookup => ({
-  'abi.fromObject': (value) => {
+  'abi_def.fromObject': (value) => {
     if(typeof value === 'string') {
-      return JSON.parse(value)
+      let json = Buffer.from(value, 'hex').toString()
+      if(json.length === 0) {
+        json = Buffer.from(value).toString()
+      }
+      return JSON.parse(json)
     }
     if(Buffer.isBuffer(value)) {
       return JSON.parse(value.toString())
     }
+    return null // let the default type take care of it
   },
+
   'setabi.abi.appendByteBuffer': ({fields, object, b}) => {
     const ser = structLookup('abi_def', 'enumivo')
     const b2 = new ByteBuffer(ByteBuffer.DEFAULT_CAPACITY, ByteBuffer.LITTLE_ENDIAN)
-    ser.appendByteBuffer(b2, object.abi)
+
+    if(Buffer.isBuffer(object.abi)) {
+      b2.append(object.abi)
+    } else if(typeof object.abi == 'object'){
+      ser.appendByteBuffer(b2, object.abi);
+    }
+
     b.writeVarint32(b2.offset) // length prefix
     b.append(b2.copy(0, b2.offset), 'binary')
   }

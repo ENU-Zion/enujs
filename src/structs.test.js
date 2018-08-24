@@ -7,11 +7,12 @@ const Enu = require('.')
 
 describe('shorthand', () => {
 
-  it('authority', () => {
-    const enu = Enu()
-    const {authority} = enu.fc.structs
+  it('authority', async () => {
+    const enu = Enu({keyPrefix: 'PUB'})
+    const enumivo = await enu.contract('enumivo')
+    const {authority} = enumivo.fc.structs
 
-    const pubkey = 'ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+    const pubkey = 'PUB6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
     const auth = {threshold: 1, keys: [{key: pubkey, weight: 1}]}
 
     assert.deepEqual(authority.fromObject(pubkey), auth)
@@ -21,9 +22,10 @@ describe('shorthand', () => {
     )
   })
 
-  it('PublicKey sorting', () => {
+  it('PublicKey sorting', async () => {
     const enu = Enu()
-    const {authority} = enu.fc.structs
+    const enumivo = await enu.contract('enumivo')
+    const {authority} = enumivo.fc.structs
 
     const pubkeys = [
       'ENU7wBGPvBgRVa4wQN2zm5CjgBF6S7tP7R3JavtSa2unHUoVQGhey',
@@ -45,10 +47,10 @@ describe('shorthand', () => {
   })
 
   it('public_key', () => {
-    const enu = Enu()
-    const {structs, types} = enu.fc
+    const enu = Enu({keyPrefix: 'PUB'})
+    const {structs, types} = eos.fc
     const PublicKeyType = types.public_key()
-    const pubkey = 'ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
+    const pubkey = 'PUB6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV'
     // 02c0ded2bc1f1305fb0faac5e6c03ee3a1924234985427b6167ca569d13df435cf
     assertSerializer(PublicKeyType, pubkey)
   })
@@ -58,6 +60,13 @@ describe('shorthand', () => {
     const {types} = enu.fc
     const Symbol = types.symbol()
     assertSerializer(Symbol, '4,ENU', '4,ENU', 'ENU')
+  })
+
+  it('symbol_code', () => {
+    const eos = Eos({defaults: true})
+    const {types} = eos.fc
+    const SymbolCode = types.symbol_code()
+    assertSerializer(SymbolCode, SymbolCode.toObject())
   })
 
   it('extended_symbol', () => {
@@ -93,9 +102,8 @@ describe('shorthand', () => {
 
 if(process.env['NODE_ENV'] === 'development') {
 
-  describe('Enumivo Abi', () => {
-
-    it('Enumivo token contract parses', (done) => {
+  function checkContract(name) {
+    it(`${name} contract parses`, (done) => {
       const enu = Enu()
 
       enu.contract('enu.token', (error, enu_token) => {
@@ -105,9 +113,32 @@ if(process.env['NODE_ENV'] === 'development') {
         done()
       })
     })
+  }
+  checkContract('enumivo')
+  checkContract('enu.token')
 
+  it('abi', async () => {
+    const enu = Enu({defaults: true, broadcast: false, sign: false})
+
+    const {abi_def} = enu.fc.structs
+
+    async function setabi(abi) {
+      await enu.setabi('inita', abi) // See README
+      const buf = enu.fc.toBuffer('abi_def', abi)
+      await enu.setabi('inita', buf) // v1/chain/abi_json_to_bin
+      await enu.setabi('inita', buf.toString('hex')) // v1/chain/abi_json_to_bin
+    }
+
+    const obj = abi_def.toObject()
+    const json = JSON.stringify(obj)
+
+    await setabi(obj)
+    await setabi(abi_def.fromObject(obj))
+    await setabi(abi_def.fromObject(json))
+    await setabi(abi_def.fromObject(Buffer.from(json).toString('hex')))
+    await setabi(abi_def.fromObject(Buffer.from(json)))
   })
-}
+})
 
 describe('Action.data', () => {
   it('json', () => {
@@ -144,7 +175,7 @@ describe('Action.data', () => {
     assertSerializer(structs.action, value, value)
   })
 
-  it('unknown type', () => {
+  it('unknown action', () => {
     const enu = Enu({forceActionDataHex: false})
     const {structs, types} = enu.fc
     const value = {
@@ -153,7 +184,10 @@ describe('Action.data', () => {
       data: '030a0b0c',
       authorization: []
     }
-    assertSerializer(structs.action, value)
+    assert.throws(
+      () => assertSerializer(structs.action, value),
+      /Missing ABI action/
+    )
   })
 })
 

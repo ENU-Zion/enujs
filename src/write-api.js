@@ -9,35 +9,43 @@ module.exports = writeApiGen
 
 const {sign} = ecc
 
-function writeApiGen(Network, network, structs, config, schemaDef) {
+function writeApiGen(Network, network, structs, config, abis) {
   if(typeof config.chainId !== 'string') {
     throw new TypeError('config.chainId is required')
   }
-
   const writeApi = WriteApi(Network, network, config, structs.transaction)
   const reserveFunctions = new Set(['transaction', 'contract'])
-  const merge = {}
 
-  // sends transactions, also a action collecting wrapper functions
+  const merge = {}
+  // sends transactions, can act as an action collecting wrapper
   merge.transaction = writeApi.genTransaction(structs, merge)
 
   // Immediate send operations automatically calls merge.transaction
-  for(let type in schemaDef) {
-    const schema = schemaDef[type]
-    if(schema.action == null) {
-      continue
-    }
-    const actionName = schema.action.name
-    if(reserveFunctions.has(actionName)) {
-      throw new TypeError('Conflicting Api function: ' + type)
-    }
+  for(const abi of abis) {
+    for(const type in abi.schema) {
+      const typeStruct = abi.schema[type]
+      if(typeof typeStruct === 'string') {
+        // skip types like; name, account_name, etc..
+        continue
+      }
 
-    const struct = structs[type]
-    if(struct == null) {
-      continue
+      assert.equal(typeof typeStruct, 'object', `abi.schema[type = ${type}]`)
+
+      const {action} = typeStruct
+      if(action === undefined) {
+        // ABI private struct
+        continue
+      }
+
+      if(reserveFunctions.has(action.name)) {
+        throw new TypeError('Conflicting Api function: ' + type)
+      }
+
+      const definition = schemaFields(abi.schema, type)
+      merge[action.name] = writeApi.genMethod(
+        type, definition, merge.transaction, action.account, action.name
+      )
     }
-    const definition = schemaFields(schemaDef, type)
-    merge[actionName] = writeApi.genMethod(type, definition, merge.transaction, schema.action.account)
   }
 
   /**
@@ -88,13 +96,16 @@ function WriteApi(Network, network, config, Transaction) {
     } else if(typeof args[0] === 'object' && typeof Array.isArray(args[0].actions)) {
       // full transaction, lookup ABIs used by each action
       const accounts = new Set() // make a unique list
+
+      // TODO: Add args[0].context_free_actions to accounts too?
       for(const action of args[0].actions) {
         accounts.add(action.account)
       }
 
       const abiPromises = []
-      // Enu contract operations are cached (efficient and offline transactions)
-      const cachedCode = new Set(['enumivo', 'enu.token', 'enu.null'])
+
+      // Eos contract operations are cached (efficient and offline transactions)
+      const cachedCode = new Set(['enumivo', 'enu.token', 'enumivo.null'])
       accounts.forEach(account => {
         if(!cachedCode.has(account)) {
           abiPromises.push(config.abiCache.abiAsync(account))
@@ -166,7 +177,7 @@ function WriteApi(Network, network, config, Transaction) {
   function genMethod(type, definition, transactionArg, account = 'enu.token', name = type) {
     return function (...args) {
       if (args.length === 0) {
-        console.log(usage(type, definition, Network, account, config))
+        console.log(usage({name, type}, definition, Network, account, config))
         return
       }
 
@@ -195,23 +206,47 @@ function WriteApi(Network, network, config, Transaction) {
         throw new Error('Callback during a transaction are not supported')
       }
 
-      const addDefaultAuths = options.authorization == null
-
       const authorization = []
-      if(options.authorization) {
-        if(typeof options.authorization === 'string') {
-          options.authorization = [options.authorization]
+      const providedAuth = options.authorization ? options.authorization : config.authorization
+      const addDefaultAuths = providedAuth == null
+
+      // Often if the first field in an action is an account name it is
+      // also the required authorization.
+      function firstAccount() {
+        const fieldKeys = Object.keys(definition)
+        const f1 = fieldKeys[0]
+
+        if(definition[f1] === 'account_name') {
+          return params[f1]
         }
-        options.authorization.forEach(auth => {
-          if(typeof auth === 'string') {
-            const [actor, permission = 'active'] = auth.split('@')
-            authorization.push({actor, permission})
-          } else if(typeof auth === 'object') {
-            authorization.push(auth)
-          }
-        })
-        assert.equal(authorization.length, options.authorization.length,
-          'invalid authorization in: ' + JSON.stringify(options.authorization))
+      }
+
+      if(providedAuth) {
+        let authArray
+        if(typeof providedAuth === 'string') {
+          authArray = [providedAuth]
+        } else if(Array.isArray(providedAuth)) {
+          authArray = providedAuth
+        }
+
+        if(authArray) {
+          authArray.forEach(auth => {
+            if(typeof auth === 'string') {
+              let [actor, permission = 'active'] = auth.split('@')
+              if(actor === '') {
+                actor = firstAccount()
+              }
+              if(actor) {
+                authorization.push({actor, permission})
+              }
+            } else if(typeof auth === 'object') {
+              authorization.push(auth)
+            }
+          })
+        }
+
+        assert.equal(authorization.length, authArray.length,
+          'invalid authorization in: ' + JSON.stringify(providedAuth))
       }
 
       const tr = {
@@ -224,13 +259,11 @@ function WriteApi(Network, network, config, Transaction) {
       }
 
       if(addDefaultAuths) {
-        const fieldKeys = Object.keys(definition)
-        const f1 = fieldKeys[0]
-
-        if(definition[f1] === 'account_name') {
+        const actor = firstAccount()
+        if(actor) {
           // Default authorization (since user did not provide one)
           tr.actions[0].authorization.push({
-            actor: params[f1],
+            actor,
             permission: 'active'
           })
         }
@@ -386,18 +419,12 @@ function WriteApi(Network, network, config, Transaction) {
       const {
         expiration,
         ref_block_num,
-        ref_block_prefix,
-        net_usage_words = 0,
-        max_cpu_usage_ms = 0,
-        delay_sec = 0
+        ref_block_prefix
       } = arg
       argHeaders = {
         expiration,
         ref_block_num,
-        ref_block_prefix,
-        net_usage_words,
-        max_cpu_usage_ms,
-        delay_sec
+        ref_block_prefix
       }
     }
 
@@ -415,6 +442,7 @@ function WriteApi(Network, network, config, Transaction) {
       assert(network, 'Network is required, provide httpEndpoint or own transaction headers')
       headers = network.createTransaction
     }
+
     headers(options.expireInSeconds, checkError(callback, config.logger, async function(rawTx) {
       // console.log('rawTx', rawTx)
       assert.equal(typeof rawTx, 'object', 'expecting transaction header object')
@@ -423,14 +451,15 @@ function WriteApi(Network, network, config, Transaction) {
       assert.equal(typeof rawTx.ref_block_prefix, 'number', 'expecting ref_block_prefix number')
 
       const defaultHeaders = {
-        net_usage_words: 0,
+        max_net_usage_words: 0,
         max_cpu_usage_ms: 0,
         delay_sec: 0
       }
 
       rawTx = Object.assign({}, defaultHeaders, rawTx)
-
+      rawTx.context_free_actions = arg.context_free_actions
       rawTx.actions = arg.actions
+      rawTx.transaction_extensions = arg.transaction_extensions
 
       // Resolve shorthand
       const txObject = Transaction.fromObject(rawTx)
@@ -445,7 +474,10 @@ function WriteApi(Network, network, config, Transaction) {
         const chainIdBuf = new Buffer(config.chainId, 'hex')
         const packedContextFreeData = new Buffer(new Uint8Array(32)) // TODO
         const signBuf = Buffer.concat([chainIdBuf, buf, packedContextFreeData])
-        sigs = config.signProvider({transaction: tr, buf: signBuf, sign})
+
+        sigs = config.signProvider({transaction: tr, buf: signBuf, sign,
+          optionsKeyProvider: options.keyProvider})
+
         if(!Array.isArray(sigs)) {
           sigs = [sigs]
         }
@@ -554,7 +586,7 @@ const optionsFormatter = option => {
   }
 }
 
-function usage (type, definition, Network, account, config) {
+function usage(action, definition, Network, account, config) {
   let usage = ''
   const out = (str = '') => {
     usage += str + '\n'
@@ -563,40 +595,21 @@ function usage (type, definition, Network, account, config) {
   out(account)
   out()
 
-  out('FUNCTION')
-  out(type)
+  out('ACTION')
+  out(action.name)
   out()
 
-  let struct
-  if(account === 'enumivo' || account === 'enu.token') {
-    const {structs} = Structs(
-      Object.assign(
-        {defaults: true, network: Network},
-        config
-      )
-    )
-    struct = structs[type]
+  const cache = config.abiCache.abi(account)
 
-    out('PARAMETERS')
-    out(JSON.stringify(definition, null, 4))
-    out()
+  out('PARAMETERS')
+  out(JSON.stringify(schemaFields(cache.schema, action.type), null, 4))
+  out()
 
-    out('EXAMPLE')
-    out(JSON.stringify(struct.toObject(), null, 4))
+  const struct = cache.structs[action.type]
 
-  } else {
-    const cache = config.abiCache.abi(account)
-    out('PARAMETERS')
-    out(JSON.stringify(schemaFields(cache.schema, type), null, 4))
-    out()
+  out('EXAMPLE')
+  out(`${account}.${action.name}(${JSON.stringify(struct.toObject(), null, 4)})`)
 
-    struct = cache.structs[type]
-    out('EXAMPLE')
-    out(JSON.stringify(struct.toObject(), null, 4))
-  }
-  if(struct == null) {
-    throw TypeError('Unknown type: ' + type)
-  }
   return usage
 }
 
@@ -613,6 +626,7 @@ const checkError = (parentErr, logger, parrentRes) => (error, result) => {
   }
 }
 
+/** Collapse inheritance (via "base") putting all the fields in one object. */
 function schemaFields(schema, type) {
   const {base, fields} = schema[type]
   const def = {}

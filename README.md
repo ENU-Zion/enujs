@@ -22,6 +22,9 @@ enu = Enu({httpEndpoint, chainId, keyProvider})
 // Cold-storage
 enu = Enu({httpEndpoint: null, chainId, keyProvider})
 
+// Add support for non-ENU public key prefixes, such as PUB, etc
+enu = Enu({keyPrefix: 'PUB'})
+
 // Read-only instance when 'enujs' is already a dependency
 enu = Enu.modules.api({/*config*/})
 
@@ -69,23 +72,18 @@ enu.getInfo({}) // @returns {Promise}
 enu.getInfo((error, result) => { console.log(error, result) })
 ```
 
-Chain and history API functions are available after creating the `enu` object.
-API methods and documentation are generated from the chain and history json files.
+### API Documentation
 
-* [chain.json](https://github.com/enumivo/enujs-api/blob/master/src/api/v1/chain.json)
-* [history.json](https://github.com/enumivo/enujs-api/blob/master/src/api/v1/history.json)
+Chain and history API functions are available after creating the `eos` object.
 
-Until we generate a markdown for these, please convert the names in these
-json to camel case functions.
-
-* `"get_info": ..` is `enu.getInfo(..)`
+* [API](https://github.com/enumivo/enujs-api/blob/master/docs/api.md#enu--object)
 
 ### Configuration
 
 ```js
 Enu = require('enujs')
 
-// Default configuration (additional options below)
+// Default configuration
 config = {
   chainId: null, // 32 byte (64 char) hex string
   keyProvider: ['PrivateKeys...'], // WIF string or array of keys..
@@ -108,13 +106,18 @@ enu = Enu(config)
   security reasons.
 
 * **keyProvider** `[array<string>|string|function]` - Provides private keys
-  used to sign transaction.  If multiple private keys are found, the API
+  used to sign transactions.  If multiple private keys are found, the API
   `get_required_keys` is called to discover which signing keys to use.  If a
   function is provided, this function is called for each transaction.
 
-* **httpEndpoint** `string` - http or https location of a enunoded server
-  providing a chain API.  When using enujs from a browser remember to configure
-  the same origin policy in enunoded or proxy server.  For testing, enunoded
+  If a keyProvider is not provided here, one may be provided on a per-action
+  or per-transaction basis in [Options](#options).
+
+* **keyPrefix** `[string='ENU']` - Change the public key prefix.
+
+* **httpEndpoint** `string` - http or https location of a nodeosd server
+  providing a chain API.  When using eosjs from a browser remember to configure
+  the same origin policy in nodeosd or proxy server.  For testing, nodeosd
   configuration `access-control-allow-origin = *` could be used.
 
   Set this value to **null** for a cold-storage (no network) configuration.
@@ -149,16 +152,28 @@ enu = Enu(config)
 * **logger** - default logging configuration.
   ```js
   logger: {
-    log: config.verbose ? console.log : null,
-    error: console.error // null to disable
+    log: config.verbose ? console.log : null,  // null to disable
+    error: config.verbose ? console.error : null,
   }
   ```
 
-  Turn off all error logging: `config.logger = {error: null}`
+  For example, redirect error logs: `config.logger = {error: (...args) => ..}`
+
+* **authorization** - replace the default eosjs authorization on actions.  An
+  authorization provided here may still be over-written by specifying an
+  authorization for each individual action.
+
+  For example, if most actions in an dapp are based on the posting key, this
+  would replace the default active authorization with a posting authorization:
+  ```js
+  {authorization: '@posting'}
+  ```
 
 ### Options
 
 Options may be provided after parameters.
+
+NOTE: `authorization` is for individual actions, it does not belong in `Eos(config)`.
 
 ```js
 options = {
@@ -190,6 +205,18 @@ enu.transfer('alice', 'bob', '1.0000 ENU', '', options)
 * **sign** `[boolean=true]` - sign the transaction with a private key.  Leaving
   a transaction unsigned avoids the need to provide a private key.
 
+* **keyProvider** `[array<string>|string|function]` - just like the global
+  keyProvider except this provides a temporary key for a single action or
+  transaction.
+
+  ```js
+  await eos.anyAction('args', {keyProvider})
+  ```
+
+  ```js
+  await eos.transaction(tr => { tr.anyAction() }, {keyProvider})
+  ```
+
 ### Transaction
 
 The transaction function accepts the standard blockchain transaction.
@@ -200,7 +227,7 @@ network connection (httpEndpoint == null). In that case provide you own headers:
 ```js
 // only needed in cold-storage or for offline transactions
 const headers = {
-  expiration: '2018-06-14T18:16:10'
+  expiration: '2018-06-14T18:16:10',
   ref_block_num: 1,
   ref_block_prefix: 452435776
 }
@@ -213,6 +240,7 @@ Create and send (broadcast) a transaction:
 enu.transaction(
   {
     // ...headers,
+    // context_free_actions: [],
     actions: [
       {
         account: 'enu.token',
@@ -230,7 +258,7 @@ enu.transaction(
       }
     ]
   }
-  // options -- example: {broadcast: false}
+  // config -- example: {broadcast: false, sign: true}
 )
 ```
 
@@ -429,13 +457,13 @@ await enu.transaction('myaccount', myaccount => {
 
   // Create the initial token with its max supply
   // const options = {authorization: 'myaccount'} // default
-  myaccount.create('myaccount', '10000000.000 TOK')//, options)
+  myaccount.create('myaccount', '10000000.000 PHI')//, options)
 
   // Issue some of the max supply for circulation into an arbitrary account
-  myaccount.issue('myaccount', '10000.000 TOK', 'issue')
+  myaccount.issue('myaccount', '10000.000 PHI', 'issue')
 })
 
-const balance = await enu.getCurrencyBalance('myaccount', 'myaccount', 'TOK')
+const balance = await enu.getCurrencyBalance('myaccount', 'myaccount', 'PHI')
 console.log('Currency Balance', balance)
 ```
 
@@ -457,24 +485,24 @@ await enu.transaction(enu =>
 
 // transaction on a single contract
 await enu.transaction('myaccount', myaccount => {
-  myaccount.transfer('myaccount', 'inita', '10.000 TOK@myaccount', '')
+  myaccount.transfer('myaccount', 'inita', '10.000 PHI', '')
 })
 
 // mix contracts in the same transaction
 await enu.transaction(['myaccount', 'enu.token'], ({myaccount, enu_token}) => {
-  myaccount.transfer('inita', 'initb', '1.000 TOK@myaccount', '')
-  enumivo_token.transfer('inita', 'initb', '1.0000 SYS', '')
+  myaccount.transfer('inita', 'initb', '1.000 PHI', '')
+  enu_token.transfer('inita', 'initb', '1.0000 SYS', '')
 })
 
 // The contract method does not take an array so must be called once for
 // each contract that is needed.
 const myaccount = await enu.contract('myaccount')
-await myaccount.transfer('myaccount', 'inita', '1.000 TOK', '')
+await myaccount.transfer('myaccount', 'inita', '1.000 PHI', '')
 
 // a transaction to a contract instance can specify multiple actions
 await myaccount.transaction(myaccountTr => {
-  myaccountTr.transfer('inita', 'initb', '1.000 TOK', '')
-  myaccountTr.transfer('initb', 'inita', '1.000 TOK', '')
+  myaccountTr.transfer('inita', 'initb', '1.000 PHI', '')
+  myaccountTr.transfer('initb', 'inita', '1.000 PHI', '')
 })
 ```
 

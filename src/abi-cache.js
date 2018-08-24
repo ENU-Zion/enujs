@@ -58,9 +58,9 @@ function AbiCache(network, config) {
       if(Buffer.isBuffer(abi)) {
         abi = JSON.parse(abi)
       }
-      const schema = abiToFcSchema(abi)
-      const structs = Structs(abiCacheConfig, schema) // structs = {structs, types}
-      return cache[account] = Object.assign({abi, schema}, structs)
+      const fcSchema = abiToFcSchema(abi, account)
+      const structs = Structs(abiCacheConfig, fcSchema) // returns {structs, types}
+      return cache[account] = Object.assign({abi, schema: fcSchema}, structs)
     }
     const c = cache[account]
     if(c == null) {
@@ -72,7 +72,7 @@ function AbiCache(network, config) {
   return config.abiCache
 }
 
-function abiToFcSchema(abi) {
+function abiToFcSchema(abi, account) {
   // customTypes
   // For FcBuffer
   const abiSchema = {}
@@ -80,11 +80,13 @@ function abiToFcSchema(abi) {
   // convert abi types to Fcbuffer schema
   if(abi.types) { // aliases
     abi.types.forEach(e => {
+      // "account_name" = "name"
       abiSchema[e.new_type_name] = e.type
     })
   }
 
   if(abi.structs) {
+    // transaction_header = fields[actor, permission] extends base "transaction"
     abi.structs.forEach(e => {
       const fields = {}
       for(const field of e.fields) {
@@ -95,6 +97,23 @@ function abiToFcSchema(abi) {
         delete abiSchema[e.name].base
       }
     })
+  }
+
+  if(abi.actions) {
+    // setprods = set_producers
+    abi.actions.forEach(action => {
+      // @example action = {name: 'setprods', type: 'set_producers'}
+      const type = abiSchema[action.type]
+      if(!type) {
+        console.error('Missing abiSchema type', action.type, account)//, abi, abiSchema)
+      } else {
+        type.action = {
+          name: action.name,
+          account
+        }
+      }
+    })
+    // console.log('abiSchema', abiSchema);
   }
 
   return abiSchema

@@ -19,7 +19,7 @@ describe('offline', () => {
     expiration: new Date().toISOString().split('.')[0], // Don't use `new Date` in production
     ref_block_num: 1,
     ref_block_prefix: 452435776,
-    net_usage_words: 0,
+    max_net_usage_words: 0,
     max_cpu_usage_ms: 0,
     delay_sec: 0,
     context_free_actions: [],
@@ -45,28 +45,37 @@ describe('offline', () => {
     assert.equal(trx.transaction.signatures.length, 2, 'signature count')
   })
 
-  it('transaction', async function() {
+  describe('custom transactions', function () {
+    const nonce = {
+      account: 'enu.null',
+      name: 'nonce',
+      data: '010f'
+    }
+
+    const authorization = [{
+      actor: 'inita',
+      permission: 'active'
+    }]
+
     const enu = Enu({
-      keyProvider: wif,
-      httpEndpoint: null
+      keyProvider: wif
     })
 
-    const trx = await enu.transaction({
-      expiration: new Date().toISOString().split('.')[0], // Don't use `new Date` in production
-      ref_block_num: 1,
-      ref_block_prefix: 452435776,
-      actions: [{
-        account: 'enu.null',
-        name: 'nonce',
-        authorization:[{
-          actor: 'inita',
-          permission: 'active'
-        }],
-        data: '0131' //hex
-      }]
+    it('context_free_actions', async function() {
+      await enu.transaction({
+        context_free_actions: [nonce],// can't have authorization
+        actions: [
+          // only action, needs an authorization
+          Object.assign({}, nonce, {authorization})
+        ]
+      })
     })
 
-    assert.equal(trx.transaction.signatures.length, 1, 'signature count')
+    it('nonce', async function() {
+      const trx = await eos.transaction({
+        actions: [ Object.assign({}, nonce, {authorization}) ],
+      })
+    })
   })
 
   it('transactionHeaders object', async function() {
@@ -83,7 +92,7 @@ describe('offline', () => {
       expiration: trx.transaction.transaction.expiration,
       ref_block_num: trx.transaction.transaction.ref_block_num,
       ref_block_prefix: trx.transaction.transaction.ref_block_prefix,
-      net_usage_words: 0,
+      max_net_usage_words: 0,
       max_cpu_usage_ms: 0,
       delay_sec: 0,
       context_free_actions: [],
@@ -93,8 +102,7 @@ describe('offline', () => {
     assert.equal(trx.transaction.signatures.length, 1, 'signature count')
   })
 
-  /*
-  it('abi', async function() {
+  it('load abi', async function() {
     const enu = Enu({httpEndpoint: null})
 
     const abiBuffer = fs.readFileSync(`docker/contracts/enu.bios/enu.bios.abi`)
@@ -191,40 +199,37 @@ if(process.env['NODE_ENV'] === 'development') {
     load('enu.token')
   })
 
-  describe('transactions', () => {
-    const signProvider = ({sign, buf}) => sign(buf, wif)
-    const promiseSigner = (args) => Promise.resolve(signProvider(args))
+describe('keyProvider', () => {
+  const keyProvider = () => {
+    return [wif]
+  }
 
-    it('usage', () => {
-      const enu = Enu({signProvider})
-      enu.transfer()
-    })
+  it('global', async function() {
+    const enu = Enu({keyProvider})
+    await enu.transfer('inita', 'initb', '1.0001 SYS', '')
+  })
 
-    // A keyProvider can return private keys directly..
-    it('keyProvider private key', () => {
+  it('per-action', async function() {
+    const enu = Enu()
 
-      // keyProvider should return an array of keys
-      const keyProvider = () => {
-        return [wif]
-      }
+    await enu.transfer('inita', 'initb', '1.0002 SYS', '', {keyProvider})
 
-      const enu = Enu({keyProvider})
+    await enu.transaction(tr => {
+      tr.transfer('inita', 'initb', '1.0003 SYS', '')
+    }, {keyProvider})
 
-      return enu.transfer('inita', 'initb', '1.0000 ENU', '', false).then(tr => {
-        assert.equal(tr.transaction.signatures.length, 1)
-        assert.equal(typeof tr.transaction.signatures[0], 'string')
-      })
-    })
+    const token = await enu.contract('enu.token')
+    await token.transfer('inita', 'initb', '1.0004 SYS', '', {keyProvider})
+  })
 
-    it('keyProvider multiple private keys (get_required_keys)', () => {
-
-      // keyProvider should return an array of keys
-      const keyProvider = () => {
-        return [
-          '5K84n2nzRpHMBdJf95mKnPrsqhZq7bhUvrzHyvoGwceBHq8FEPZ',
-          wif
-        ]
-      }
+  it('multiple private keys (get_required_keys)', () => {
+    // keyProvider should return an array of keys
+    const keyProvider = () => {
+      return [
+        '5K84n2nzRpHMBdJf95mKnPrsqhZq7bhUvrzHyvoGwceBHq8FEPZ',
+        wif
+      ]
+    }
 
       const enu = Enu({keyProvider})
 
@@ -234,10 +239,10 @@ if(process.env['NODE_ENV'] === 'development') {
       })
     })
 
-    // If a keystore is used, the keyProvider should return available
-    // public keys first then respond with private keys next.
-    it('keyProvider public keys then private key', () => {
-      const pubkey = ecc.privateToPublic(wif)
+  // If a keystore is used, the keyProvider should return available
+  // public keys first then respond with private keys next.
+  it('public keys then private key', () => {
+    const pubkey = ecc.privateToPublic(wif)
 
       // keyProvider should return a string or array of keys.
       const keyProvider = ({transaction, pubkeys}) => {
@@ -261,33 +266,46 @@ if(process.env['NODE_ENV'] === 'development') {
       })
     })
 
-    it('keyProvider from enujs-keygen', () => {
-      const keystore = Keystore('uid')
-      keystore.deriveKeys({parent: wif})
-      const enu = Enu({keyProvider: keystore.keyProvider})
-      return enu.transfer('inita', 'initb', '12.0000 ENU', '', true)
-    })
+  it('from enujs-keygen', () => {
+    const keystore = Keystore('uid')
+    keystore.deriveKeys({parent: wif})
+    const enu = Enu({keyProvider: keystore.keyProvider})
+    return enu.transfer('inita', 'initb', '12.0000 SYS', '', true)
+  })
 
-    it('keyProvider return Promise', () => {
-      const enu = Enu({keyProvider: new Promise(resolve => {resolve(wif)})})
-      return enu.transfer('inita', 'initb', '1.6180 ENU', '', true)
-    })
+  it('return Promise', () => {
+    const enu = Enu({keyProvider: new Promise(resolve => {resolve(wif)})})
+    return enu.transfer('inita', 'initb', '1.6180 SYS', '', true)
+  })
+})
 
-    it('signProvider', () => {
-      const customSignProvider = ({buf, sign, transaction}) => {
+describe('signProvider', () => {
+  it('custom', function() {
+    const customSignProvider = ({buf, sign, transaction}) => {
 
         // All potential keys (ENU6MRy.. is the pubkey for 'wif')
         const pubkeys = ['ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV']
 
-        return enu.getRequiredKeys(transaction, pubkeys).then(res => {
-          // Just the required_keys need to sign
-          assert.deepEqual(res.required_keys, pubkeys)
-          return sign(buf, wif) // return hex string signature or array of signatures
-        })
-      }
-      const enu = Enu({signProvider: customSignProvider})
-      return enu.transfer('inita', 'initb', '2.0000 ENU', '', false)
-    })
+      return enu.getRequiredKeys(transaction, pubkeys).then(res => {
+        // Just the required_keys need to sign
+        assert.deepEqual(res.required_keys, pubkeys)
+        return sign(buf, wif) // return hex string signature or array of signatures
+      })
+    }
+
+    const enu = Enu({signProvider: customSignProvider})
+    return enu.transfer('inita', 'initb', '2.0000 SYS', '', false)
+  })
+})
+
+describe('transactions', () => {
+  const signProvider = ({sign, buf}) => sign(buf, wif)
+  const promiseSigner = (args) => Promise.resolve(signProvider(args))
+
+  it('usage', () => {
+    const enu = Enu({signProvider})
+    enu.setprods()
+  })
 
     it('create asset', async function() {
       const enu = Enu({signProvider})
@@ -341,9 +359,10 @@ if(process.env['NODE_ENV'] === 'development') {
       })
     })
 
-    it('transfer (broadcast)', () => {
-      const enu = Enu({signProvider})
-      return enu.transfer('inita', 'initb', '1.0000 ENU', '')
+  it('mockTransactions fail', () => {
+    const enu = Enu({signProvider, mockTransactions: 'fail'})
+    return enu.transfer('inita', 'initb', '1.0000 SYS', '').catch(error => {
+      assert(error.indexOf('fake error') !== -1, 'expecting: fake error')
     })
 
     it('transfer custom token precision (broadcast)', () => {
@@ -369,9 +388,35 @@ if(process.env['NODE_ENV'] === 'development') {
       })
     })
 
-    it('transfer (no broadcast)', () => {
-      const enu = Enu({signProvider})
-      return enu.transfer('inita', 'initb', '1.0000 ENU', '', {broadcast: false})
+  it('transfer custom authorization (permission only)', async () => {
+    const enu = Enu({signProvider, broadcast: false, authorization: '@posting'})
+    const tr = await enu.transfer('inita', 'initb', '1.0000 SYS', '')
+    assert.deepEqual(
+      tr.transaction.transaction.actions[0].authorization,
+      [{actor: 'inita', permission: 'posting'}]
+    )
+  })
+
+  it('transfer custom global authorization', async () => {
+    const authorization = [{actor: 'inita', permission: 'posting'}]
+    const enu = Enu({signProvider, authorization, broadcast: false})
+    const tr = await enu.transfer('inita', 'initb', '1.0000 SYS', '')
+    assert.deepEqual(
+      tr.transaction.transaction.actions[0].authorization,
+      authorization
+    )
+  })
+
+  it('transfer custom authorization sorting (no broadcast)', () => {
+    const enu = Enu({signProvider})
+    return enu.transfer('inita', 'initb', '1.0000 SYS', '',
+      {authorization: ['initb@owner', 'inita@owner'], broadcast: false}
+    ).then(({transaction}) => {
+      const ans = [
+        {actor: 'inita', permission: 'owner'},
+        {actor: 'initb', permission: 'owner'}
+      ]
+      assert.deepEqual(transaction.transaction.actions[0].authorization, ans)
     })
 
     it('transfer (no broadcast, no sign)', () => {
@@ -396,17 +441,11 @@ if(process.env['NODE_ENV'] === 'development') {
       })
     })
 
-    it('action to contract', () => {
-      return Enu({signProvider}).contract('enu.token').then(token => {
-        return token.transfer('inita', 'initb', '1.0000 ENU', '')
-          // transaction sent on each command
-          .then(tr => {
-            assert.equal(1, tr.transaction.transaction.actions.length)
-
-            return token.transfer('initb', 'inita', '1.0000 ENU', '')
-              .then(tr => {assert.equal(1, tr.transaction.transaction.actions.length)})
-          })
-      }).then(r => {assert(r == undefined)})
+  it('action to unknown contract', done => {
+    Enu({signProvider}).contract('unknown432')
+    .then(() => {throw 'expecting error'})
+    .catch(error => { // eslint-disable-line handle-callback-err
+      done()
     })
 
     it('action to contract atomic', async function() {
@@ -520,13 +559,13 @@ if(process.env['NODE_ENV'] === 'development') {
     assert.deepEqual(abi, enu.fc.abiCache.abi('enumivo'))
   })
 
-  it('Transaction ABI lookup', async function() {
-    const enu = Enu()
-    const tx = await enu.transaction(
+  it('custom transaction', () => {
+    const enu = Enu({signProvider})
+    return enu.transaction(
       {
         actions: [
           {
-            account: 'currency',
+            account: 'enu.token',
             name: 'transfer',
             data: {
               from: 'inita',
@@ -546,7 +585,47 @@ if(process.env['NODE_ENV'] === 'development') {
     assert.equal(tx.transaction.transaction.actions[0].account, 'currency')
   })
 
-} // if development
+  it('custom contract transfer', async function() {
+    const enu = Enu({signProvider})
+    await enu.contract('currency').then(currency =>
+      currency.transfer('currency', 'inita', '1.0000 CUR', '')
+    )
+  })
+})
+
+it('Transaction ABI cache', async function() {
+  const enu = Enu()
+  assert.throws(() => enu.fc.abiCache.abi('enu.msig'), /not cached/)
+  const abi = await enu.fc.abiCache.abiAsync('enu.msig')
+  assert.deepEqual(abi, await enu.fc.abiCache.abiAsync('enu.msig', false/*force*/))
+  assert.deepEqual(abi, enu.fc.abiCache.abi('enu.msig'))
+})
+
+it('Transaction ABI lookup', async function() {
+  const enu = Enu()
+  const tx = await enu.transaction(
+    {
+      actions: [
+        {
+          account: 'currency',
+          name: 'transfer',
+          data: {
+            from: 'inita',
+            to: 'initb',
+            quantity: '13.0000 CUR',
+            memo: ''
+          },
+          authorization: [{
+            actor: 'inita',
+            permission: 'active'
+          }]
+        }
+      ]
+    },
+    {sign: false, broadcast: false}
+  )
+  assert.equal(tx.transaction.transaction.actions[0].account, 'currency')
+})
 
 const randomName = () => {
   const name = String(Math.round(Math.random() * 1000000000)).replace(/[0,6-9]/g, '')
