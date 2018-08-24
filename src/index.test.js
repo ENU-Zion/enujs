@@ -114,7 +114,6 @@ describe('offline', () => {
     const bios = await enu.contract('enu.bios')
     assert(typeof bios.newaccount === 'function', 'unrecognized contract')
   })
-  */
 
 })
 
