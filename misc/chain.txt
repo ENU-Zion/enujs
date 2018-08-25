@@ -1,0 +1,47 @@
+
+enunode --verbose-http-errors --max-transaction-time=1000 -e --http-alias=enunode:8888 --http-alias=127.0.0.1:8888 --http-alias=localhost:8888 --access-control-allow-origin "*"
+enuwallet --http-server-address=127.0.0.1:8900 --http-alias=keosd:8900 --http-alias=localhost:8900
+
+enucli -u http://127.0.0.1:8888 --wallet-url http://127.0.0.1:8900 wallet create --to-console
+
+enucli wallet import --private-key 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
+
+enucli create account enumivo inita ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo initb ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo initc ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+
+enucli create account enumivo enu.blockpay ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo enu.msig ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo enu.names ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo enu.ram ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo enu.ramfee ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo enu.savings ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo enu.stake ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo enu.token ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli create account enumivo enu.votepay ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+
+enucli set contract enu.msig contracts/enu.msig -p enu.msig@active
+enucli set contract enu.token contracts/enu.token -p enu.token@active
+enucli push action enu.token create '{"issuer":"enu.token", "maximum_supply": "1000000000.0000 ENU"}' -p enu.token@active
+enucli push action enu.token issue '{"to":"enu.token", "quantity": "10000.0000 ENU", "memo": "issue"}' -p enu.token@active
+
+enucli set contract enumivo contracts/enu.bios -p enumivo@active
+
+enucli transfer enu.token enumivo '1000 ENU'
+enucli transfer enu.token inita '1000 ENU'
+enucli transfer enu.token initb '1000 ENU'
+enucli transfer enu.token initc '1000 ENU'
+
+enucli push action enu.token create '{"issuer":"enu.token", "maximum_supply": "1000000000.000 PHI"}' -p enu.token@active
+enucli push action enu.token issue '{"to":"enu.token", "quantity": "10000.000 PHI", "memo": "issue"}' -p enu.token@active
+
+enucli transfer enu.token inita '100 PHI'
+enucli transfer enu.token initb '100 PHI'
+
+enucli create account enumivo currency ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV ENU6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+enucli set contract currency contracts/enu.token -p currency@active
+
+enucli push action currency create '{"issuer":"currency", "maximum_supply": "1000000000.0000 CUR"}' -p currency@active
+enucli push action currency issue '{"to":"currency", "quantity": "10000.0000 CUR", "memo": "issue"}' -p currency@active
+
+enucli push action currency transfer '{"from":"currency", "to": "inita", "quantity": "100.0000 CUR", "memo": "issue"}' -p currency
