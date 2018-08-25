@@ -24,7 +24,7 @@ describe('format', () => {
     })
 
     it('encode / decode', () => {
-      assert.equal('12373', encodeName('enu'), 'encode')
+      assert.equal('62548', encodeName('enu'), 'encode')
       assert.equal('3055', encodeNameHex('enu'), 'encode hex')
       assert.equal(decodeName(encodeName('enu')), 'enu', 'decode')
 

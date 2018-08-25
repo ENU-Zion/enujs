@@ -105,7 +105,7 @@ describe('offline', () => {
   it('load abi', async function() {
     const enu = Enu({httpEndpoint: null})
 
-    const abiBuffer = fs.readFileSync(`docker/contracts/enu.bios/enu.bios.abi`)
+    const abiBuffer = fs.readFileSync(`contracts/enu.bios/enu.bios.abi`)
     const abiObject = JSON.parse(abiBuffer)
 
     assert.deepEqual(abiObject, enu.fc.abiCache.abi('enu.bios', abiBuffer).abi)
@@ -154,8 +154,8 @@ describe('Contract', () => {
       const config = {binaryen: require("binaryen"), keyProvider: wif}
       const enu = Enu(config)
 
-      const wasm = fs.readFileSync(`docker/contracts/${contract}/${contract}.wasm`)
-      const abi = fs.readFileSync(`docker/contracts/${contract}/${contract}.abi`)
+      const wasm = fs.readFileSync(`contracts/${contract}/${contract}.wasm`)
+      const abi = fs.readFileSync(`contracts/${contract}/${contract}.abi`)
 
 
       await enu.setcode(account, 0, 0, wasm)
