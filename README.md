@@ -486,6 +486,11 @@ transferTransaction = transfer.transaction
 enu = Enu(/* {httpEndpoint: 'https://..'} */)
 
 processedTransaction = await enu.pushTransaction(transferTransaction)
+
+// enucli version:
+const enucliTransaction = transferTransaction.transaction
+enucliTransaction.signatures = transferTransaction.signatures
+// `enucli push transaction ${JSON.stringify(enucliTransaction)}`
 ```
 
 #### Custom Token
