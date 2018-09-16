@@ -1,6 +1,6 @@
 
 enunode --verbose-http-errors --max-transaction-time=1000 -e --http-alias=enunode:8888 --http-alias=127.0.0.1:8888 --http-alias=localhost:8888 --access-control-allow-origin "*"
-enuwallet --http-server-address=127.0.0.1:8900 --http-alias=keosd:8900 --http-alias=localhost:8900
+enuwallet --http-server-address=127.0.0.1:8900 --http-alias=enuwallet:8900 --http-alias=localhost:8900
 
 enucli -u http://127.0.0.1:8888 --wallet-url http://127.0.0.1:8900 wallet create --to-console
 

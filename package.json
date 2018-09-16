@@ -1,6 +1,6 @@
 {
   "name": "enujs",
-  "version": "16.0.7",
+  "version": "16.0.8",
   "description": "General purpose library for the Enumivo blockchain.",
   "main": "lib/index.js",
   "files": [

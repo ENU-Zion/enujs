@@ -1,6 +1,9 @@
 # Enujs
 
+# Enujs
+
 General purpose library for Enumivo blockchains.
+
 
 ### Usage
 
@@ -11,7 +14,7 @@ General purpose library for Enumivo blockchains.
 <html>
 <head>
   <meta charset="utf-8">
-  <script src="https://cdn.jsdelivr.net/npm/enujs@16.0.7/lib/enu.min.js"
+  <script src="https://cdn.jsdelivr.net/npm/enujs@16.0.8/lib/enu.min.js"
     crossorigin="anonymous"></script>
 
   <script>
