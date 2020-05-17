@@ -1881,10 +1881,10 @@ fast-safe-stringify@^2.0.7:
   resolved "https://registry.yarnpkg.com/fast-safe-stringify/-/fast-safe-stringify-2.0.7.tgz#124aa885899261f68aedb42a7c080de9da608743"
   integrity sha512-Utm6CdzT+6xsDk2m8S6uL8VHxNwI6Jub+e9NYTcAms28T84pTa25GJQV9j0CY0N1rM8hK4x6grpF2BQf+2qwVA==
 
-fcbuffer@2.2.1:
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/fcbuffer/-/fcbuffer-2.2.1.tgz#183efde2b2c8382e58ca34929d39bf147e9402e0"
-  integrity sha512-yR9nAeOghj2GUTUbjLQHMFM2AkxiX/jhrxWQiP6GaxJVxJlgugCnZd19eF2ooSZw6w0tCxEBU8plOFhsOBRJcQ==
+fcbuffer@2.2.2:
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/fcbuffer/-/fcbuffer-2.2.2.tgz#987d10062c46a8bfea27da77c964f43e9e25a014"
+  integrity sha512-4OhDYe3F3iToKkqao6aj72XcvEjCB4p06U8Wy30lYcLQTp2ispBf2cCyeymKPJQGnbG5wpBa2PraaWWJuZVnUg==
   dependencies:
     bn.js "^4.11.8"
     bytebuffer "^5.0.1"

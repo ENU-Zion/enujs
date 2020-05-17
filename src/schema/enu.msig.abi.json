@@ -75,6 +75,10 @@
         {
           "name": "level",
           "type": "permission_level"
+        },
+        {
+          "name": "proposal_hash",
+          "type": "checksum256[]"
         }
       ]
     },
