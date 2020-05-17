@@ -12,6 +12,7 @@ const schema = require('./schema')
 const token = require('./schema/enu.token.abi.json')
 const system = require('./schema/enu.system.abi.json')
 const enumivo_null = require('./schema/enumivo.null.abi.json')
+const msig = require('./schema/enu.msig.abi.json')
 
 const Enu = (config = {}) => {
   const configDefaults = {
@@ -79,6 +80,7 @@ function createEnu(config) {
   abis.push(abiCache.abi('enumivo.null', enumivo_null))
   abis.push(abiCache.abi('enu.token', token))
   abis.push(abiCache.abi('enumivo', system))
+  abis.push(abiCache.abi('enu.msig', msig))
 
   if(!config.chainId) {
     config.chainId = 'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f'
