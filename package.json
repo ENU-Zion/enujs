@@ -1,6 +1,6 @@
 {
   "name": "enujs",
-  "version": "16.0.8",
+  "version": "16.1.0",
   "description": "General purpose library for the Enumivo blockchain.",
   "main": "lib/index.js",
   "files": [
@@ -24,7 +24,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/enumivo/enujs.git"
+    "url": "git+https://github.com/ENU-Zion/enujs.git"
   },
   "keywords": [
     "ENU",
@@ -33,9 +33,9 @@
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/enumivo/enujs/issues"
+    "url": "https://github.com/ENU-Zion/enujs/issues"
   },
-  "homepage": "https://github.com/enumivo/enujs#readme",
+  "homepage": "https://github.com/ENU-Zion/enujs#readme",
   "devDependencies": {
     "babel-cli": "6.26.0",
     "babel-core": "6.26.3",
